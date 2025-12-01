@@ -179,11 +179,11 @@ fun MainPage(navController: NavController) {
                         // Grid of selections
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
                             SelectionItem(icon = Icons.Default.Refresh, label = "Recycle", onClick = { navController.navigate("RecycleScreen") })
-                            SelectionItem(icon = Icons.Default.ShoppingCart, label = "Exchange", onClick = { navController.navigate("DataSetoranScreen") })
+                            SelectionItem(icon = Icons.Default.Savings, label = "Deposit", onClick = { navController.navigate("DataSetoranScreen") })
                         }
                         Spacer(modifier = Modifier.height(16.dp))
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
-                            SelectionItem(icon = Icons.Default.LocationOn, label = "Nearby")
+                            SelectionItem(icon = Icons.Default.CurrencyExchange, label = "Exchange", onClick = { navController.navigate("ExchangeScreen") })
                             SelectionItem(icon = Icons.Default.Info, label = "News", onClick = { navController.navigate("NewsScreen") })
                         }
                     }
