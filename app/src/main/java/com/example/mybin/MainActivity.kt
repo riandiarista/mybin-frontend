@@ -12,6 +12,7 @@ import androidx.navigation.navArgument
 import com.example.mybin.tampilan.AddAddressScreen
 import com.example.mybin.tampilan.DataSetoranScreen
 import com.example.mybin.tampilan.DetailSampahScreen
+import com.example.mybin.tampilan.ExchangeScreen
 import com.example.mybin.tampilan.LaporanScreen
 import com.example.mybin.tampilan.LoginScreen
 import com.example.mybin.tampilan.MainPage
@@ -70,6 +71,9 @@ class MainActivity : ComponentActivity() {
                     }
                     composable("SampahkuScreen") {
                         SampahkuScreen(navController)
+                    }
+                    composable("ExchangeScreen") {
+                        ExchangeScreen(navController)
                     }
                 }
             }
