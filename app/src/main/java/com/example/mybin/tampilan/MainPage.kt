@@ -90,15 +90,17 @@ fun MainPage(navController: NavController) {
                         modifier = Modifier
                             .offset(x = messageOffset)
                             .alpha(itemAlpha),
-                        icon = Icons.Default.Email,
-                        label = "Message"
+                        icon = Icons.Default.Notifications,
+                        label = "Notifikasi",
+                        onClick = { navController.navigate("notifikasi_screen") }
                     )
                     BottomNavItem(
                         modifier = Modifier
                             .offset(x = accountOffset)
                             .alpha(itemAlpha),
                         icon = Icons.Default.Person,
-                        label = "Account"
+                        label = "Account",
+                        onClick = { navController.navigate("profile_screen") } // Navigate to ProfileScreen
                     )
 
                     FloatingActionButton(
@@ -150,8 +152,6 @@ fun MainPage(navController: NavController) {
                             Text("Selamat Sore, Puan", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = greenColor)
                             Text("Yuk daur ulang sampahmu", fontSize = 12.sp, color = Color.Gray)
                         }
-                        Spacer(modifier = Modifier.weight(1f))
-                        Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = greenColor)
                     }
                 }
 

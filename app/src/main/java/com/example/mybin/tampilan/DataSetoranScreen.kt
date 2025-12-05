@@ -52,7 +52,6 @@ fun DataSetoranScreen(navController: NavController) {
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFF5F5F5))
             )
         },
-        bottomBar = { MyBinBottomNavBar(navController = navController, selectedRoute = "exchange") },
         containerColor = Color(0xFFF5F5F5)
     ) { paddingValues ->
         LazyColumn(
@@ -79,7 +78,7 @@ fun DataSetoranScreen(navController: NavController) {
 fun TambahDataButton(navController: NavController) { // Accept NavController
     val gradient = Brush.horizontalGradient(listOf(Color(0xFF86F3B8), Color(0xFF53E690)))
     Button(
-        onClick = { navController.navigate("AddAddressScreen") }, // Navigate on click
+        onClick = { navController.navigate("pilih_setoran_screen") }, // Navigate on click
         modifier = Modifier
             .fillMaxWidth()
             .height(100.dp),
@@ -160,23 +159,13 @@ fun AdminSetoranItem(setoran: AdminSetoran) {
                     }
                     if (setoran.status == "Diproses") {
                         Text("Status +", color = Color.Blue, fontSize = 12.sp)
-                    } else {
+                    }
+                    else {
                         Text("Lihat Detail", color = Color.Gray, fontSize = 12.sp)
                     }
                 }
             }
         }
-    }
-}
-
-@Composable
-fun MyBinBottomNavBar(navController: NavController, selectedRoute: String) {
-    NavigationBar(containerColor = Color.White) {
-        NavigationBarItem(selected = selectedRoute == "home", onClick = { /*navController.navigate("home")*/ }, icon = { Icon(Icons.Filled.Home, contentDescription = "Home") }, label = { Text("Home") })
-        NavigationBarItem(selected = selectedRoute == "laporan", onClick = { /*navController.navigate("laporan")*/ }, icon = { Icon(Icons.Filled.Assessment, contentDescription = "Laporan") }, label = { Text("Laporan") })
-        NavigationBarItem(selected = selectedRoute == "exchange", onClick = { /* Already here */ }, icon = { Icon(Icons.Filled.Recycling, contentDescription = "Exchange", modifier = Modifier.size(40.dp)) }, label = {})
-        NavigationBarItem(selected = selectedRoute == "chat", onClick = { /*navController.navigate("chat")*/ }, icon = { Icon(Icons.Filled.Chat, contentDescription = "Chat") }, label = { Text("Chat") })
-        NavigationBarItem(selected = selectedRoute == "akun", onClick = { /*navController.navigate("akun")*/ }, icon = { Icon(Icons.Filled.Person, contentDescription = "Akun") }, label = { Text("Akun") })
     }
 }
 

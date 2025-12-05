@@ -68,7 +68,7 @@ fun NewsScreen(navController: NavController) {
                 .padding(top = 80.dp) // Adjusted padding to make space for back button
         ) {
             Header()
-            Body()
+            Body(navController)
         }
     }
 }
@@ -108,7 +108,7 @@ private fun Header() {
 }
 
 @Composable
-private fun Body() {
+private fun Body(navController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -144,7 +144,7 @@ private fun Body() {
                 date = "15 Juli 2022"
             )
             FloatingActionButton(
-                onClick = { /*TODO*/ },
+                onClick = { navController.navigate("berita_anda_screen") },
                 modifier = Modifier.padding(16.dp),
                 shape = CircleShape,
                 containerColor = Color(0xFF4CAF50)

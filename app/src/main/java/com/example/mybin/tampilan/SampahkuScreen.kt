@@ -1,5 +1,7 @@
 package com.example.mybin.tampilan
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -28,20 +30,33 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxState
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.mybin.R
@@ -59,13 +74,15 @@ data class SampahData(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SampahkuScreen(navController: NavController) {
-    val sampleData = listOf(
+    var sampleData by remember { mutableStateOf(listOf(
         SampahData(1, "An Organik", "Botol Plastik", "1.5 Kg", R.drawable.introawal, Color(0xFF4CAF50)),
         SampahData(2, "Organik", "Rumput", "5.0 Kg", R.drawable.introawal, Color.Green),
         SampahData(3, "Sampah B3", "Baterai", "1.50 Kg", R.drawable.introawal, Color.Red),
         SampahData(4, "An Organik", "Botol Plastik", "1.5 Kg", R.drawable.introawal, Color(0xFF4CAF50)),
         SampahData(5, "An Organik", "Botol Plastik", "1.5 Kg", R.drawable.introawal, Color(0xFF4CAF50))
-    )
+    )) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var itemToDelete by remember { mutableStateOf<SampahData?>(null) }
 
     Scaffold(
         topBar = {
@@ -109,12 +126,90 @@ fun SampahkuScreen(navController: NavController) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             items(sampleData, key = { it.id }) { item ->
-                when (item.id) {
-                    2 -> SampahItemWithDelete(item)
-                    5 -> SampahItemWithEdit(item)
-                    else -> SampahItemCard(item)
+                val dismissState = rememberSwipeToDismissBoxState(
+                    confirmValueChange = { dismissValue ->
+                        when(dismissValue) {
+                            SwipeToDismissBoxValue.StartToEnd -> {
+                                navController.navigate("edit_sampah_screen/${item.id}/${item.jenis}/${item.nama}/${item.berat}")
+                                false
+                            }
+                            SwipeToDismissBoxValue.EndToStart -> {
+                                itemToDelete = item
+                                showDeleteDialog = true
+                                false
+                            }
+                            else -> false
+                        }
+                    },
+                    positionalThreshold = { it * 0.25f }
+                )
+                SwipeToDismissBox(
+                    state = dismissState,
+                    backgroundContent = { SwipeBackground(dismissState) }
+                ) {
+                    SampahItemCard(item)
                 }
             }
+        }
+    }
+
+    if (showDeleteDialog) {
+        DeleteConfirmationDialog(
+            onConfirm = {
+                itemToDelete?.let { item ->
+                    sampleData = sampleData.filterNot { it.id == item.id }
+                }
+                showDeleteDialog = false
+                itemToDelete = null
+            },
+            onDismiss = {
+                showDeleteDialog = false
+                itemToDelete = null
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SwipeBackground(dismissState: SwipeToDismissBoxState) {
+    val direction = dismissState.dismissDirection
+    val color by animateColorAsState(
+        when (dismissState.targetValue) {
+            SwipeToDismissBoxValue.Settled -> Color.LightGray
+            SwipeToDismissBoxValue.StartToEnd -> Color(0xFF4CAF50) // Green for Edit
+            SwipeToDismissBoxValue.EndToStart -> Color.Red
+        },
+        label = ""
+    )
+    val alignment = when (direction) {
+        SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
+        SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
+        else -> Alignment.Center
+    }
+    val icon = when (direction) {
+        SwipeToDismissBoxValue.StartToEnd -> Icons.Default.Edit
+        SwipeToDismissBoxValue.EndToStart -> Icons.Default.Delete
+        else -> null
+    }
+    val scale by animateFloatAsState(
+        if (dismissState.targetValue == SwipeToDismissBoxValue.Settled) 0.75f else 1f, label = ""
+    )
+
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(color, shape = RoundedCornerShape(16.dp))
+            .padding(horizontal = 20.dp),
+        contentAlignment = alignment
+    ) {
+        icon?.let {
+            Icon(
+                it,
+                contentDescription = "Swipe Action",
+                modifier = Modifier.scale(scale),
+                tint = Color.White
+            )
         }
     }
 }
@@ -149,42 +244,58 @@ fun SampahItemCard(item: SampahData, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun SampahItemWithDelete(item: SampahData) {
-    Box(modifier = Modifier.fillMaxWidth()) {
-        Row(modifier = Modifier.align(Alignment.CenterEnd)) {
-            Spacer(modifier = Modifier.width(100.dp))
-            Box(
-                modifier = Modifier
-                    .width(80.dp)
-                    .height(88.dp) // Match card height
-                    .background(Color.Red, shape = RoundedCornerShape(16.dp)),
-                contentAlignment = Alignment.Center
+fun DeleteConfirmationDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(8.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                IconButton(onClick = { /* TODO: Delete action */ }) {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.White)
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = null,
+                    tint = Color.Red,
+                    modifier = Modifier.size(48.dp)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Hapus Sampah",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Anda yakin ingin menghapus item ini? Tindakan ini tidak dapat dibatalkan.",
+                    textAlign = TextAlign.Center,
+                    color = Color.Gray
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Batal")
+                    }
+                    Button(
+                        onClick = onConfirm,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                    ) {
+                        Text("Hapus")
+                    }
                 }
             }
         }
-        SampahItemCard(item, modifier = Modifier.padding(end = 24.dp))
-    }
-}
-
-@Composable
-fun SampahItemWithEdit(item: SampahData) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier = Modifier
-                .width(60.dp)
-                .height(88.dp)
-                .background(Color(0xFF4CAF50), shape = RoundedCornerShape(16.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            IconButton(onClick = { /* TODO: Edit action */ }) {
-                Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color.White)
-            }
-        }
-        Spacer(modifier = Modifier.width(16.dp))
-        SampahItemCard(item)
     }
 }
 

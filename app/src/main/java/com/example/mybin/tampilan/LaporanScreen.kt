@@ -56,7 +56,7 @@ fun LaporanScreen(navController: NavController) {
             TopAppBar(
                 title = { Text("Riwayat Penyetoran", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = { navController.navigate("MainPage") }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
                     }
                 },
@@ -68,6 +68,7 @@ fun LaporanScreen(navController: NavController) {
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         },
+        bottomBar = { MyBinBottomNavBar(navController = navController, activeScreen = "Laporan") },
         containerColor = Color(0xFFF5F5F5)
     ) { paddingValues ->
         LazyColumn(
@@ -96,6 +97,18 @@ fun LaporanScreen(navController: NavController) {
 
     if (showExportDialog) {
         ExportDialog { showExportDialog = false }
+    }
+}
+
+@Composable
+fun MyBinBottomNavBar(navController: NavController, activeScreen: String) {
+    BottomAppBar(containerColor = Color.White) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
+            BottomNavItem(icon = Icons.Default.Home, label = "Home", isSelected = activeScreen == "Home", onClick = { navController.navigate("MainPage") })
+            BottomNavItem(icon = Icons.Default.List, label = "Laporan", isSelected = activeScreen == "Laporan", onClick = { navController.navigate("LaporanScreen") })
+            BottomNavItem(icon = Icons.Default.Notifications, label = "Notifikasi", isSelected = activeScreen == "Notifikasi", onClick = { navController.navigate("notifikasi_screen") })
+            BottomNavItem(icon = Icons.Default.Person, label = "Account", isSelected = activeScreen == "Account", onClick = { navController.navigate("profile_screen") })
+        }
     }
 }
 

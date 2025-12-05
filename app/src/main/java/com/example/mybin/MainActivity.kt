@@ -10,15 +10,22 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.mybin.tampilan.AddAddressScreen
+import com.example.mybin.tampilan.BeritaAndaScreen
+import com.example.mybin.tampilan.BuatBeritaScreen
 import com.example.mybin.tampilan.DataSetoranScreen
 import com.example.mybin.tampilan.DetailSampahScreen
+import com.example.mybin.tampilan.EditSampahScreen
 import com.example.mybin.tampilan.ExchangeScreen
 import com.example.mybin.tampilan.LaporanScreen
 import com.example.mybin.tampilan.LoginScreen
 import com.example.mybin.tampilan.MainPage
 import com.example.mybin.tampilan.NewsScreen
+import com.example.mybin.tampilan.NotifikasiScreen
 import com.example.mybin.tampilan.OnboardingScreen
+import com.example.mybin.tampilan.PengaturanAkunScreen
 import com.example.mybin.tampilan.PilihJenisSampahScreen
+import com.example.mybin.tampilan.PilihSetoranScreen
+import com.example.mybin.tampilan.ProfileScreen
 import com.example.mybin.tampilan.RecycleScreen
 import com.example.mybin.tampilan.SampahkuScreen
 import com.example.mybin.ui.theme.MyBinTheme
@@ -51,6 +58,41 @@ class MainActivity : ComponentActivity() {
                     }
                     composable("NewsScreen") {
                         NewsScreen(navController)
+                    }
+                    composable("berita_anda_screen") {
+                        BeritaAndaScreen(navController)
+                    }
+                    composable("buat_berita_screen") {
+                        BuatBeritaScreen(navController)
+                    }
+                     composable("notifikasi_screen") {
+                        NotifikasiScreen(navController)
+                    }
+                    composable("profile_screen") {
+                        ProfileScreen(navController)
+                    }
+                    composable("pengaturan_akun_screen") {
+                        PengaturanAkunScreen(navController)
+                    }
+                    composable("pilih_setoran_screen") {
+                        PilihSetoranScreen(navController)
+                    }
+                    composable(
+                        "edit_sampah_screen/{sampahId}/{jenisSampah}/{namaSampah}/{beratSampah}",
+                        arguments = listOf(
+                            navArgument("sampahId") { type = NavType.StringType },
+                            navArgument("jenisSampah") { type = NavType.StringType },
+                            navArgument("namaSampah") { type = NavType.StringType },
+                            navArgument("beratSampah") { type = NavType.StringType },
+                        )
+                    ) {
+                        EditSampahScreen(
+                            navController, 
+                            it.arguments?.getString("sampahId"),
+                            it.arguments?.getString("jenisSampah"),
+                            it.arguments?.getString("namaSampah"),
+                            it.arguments?.getString("beratSampah"),
+                        )
                     }
                     composable("RecycleScreen") {
                         RecycleScreen(navController)
