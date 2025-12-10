@@ -19,6 +19,7 @@ import com.example.mybin.tampilan.ExchangeScreen
 import com.example.mybin.tampilan.LaporanScreen
 import com.example.mybin.tampilan.LoginScreen
 import com.example.mybin.tampilan.MainPage
+import com.example.mybin.tampilan.NewsDetailScreen
 import com.example.mybin.tampilan.NewsScreen
 import com.example.mybin.tampilan.NotifikasiScreen
 import com.example.mybin.tampilan.OnboardingScreen
@@ -58,6 +59,9 @@ class MainActivity : ComponentActivity() {
                     }
                     composable("NewsScreen") {
                         NewsScreen(navController)
+                    }
+                    composable("news_detail_screen") {
+                        NewsDetailScreen(navController)
                     }
                     composable("berita_anda_screen") {
                         BeritaAndaScreen(navController)

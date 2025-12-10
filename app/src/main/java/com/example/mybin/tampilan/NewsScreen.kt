@@ -2,6 +2,7 @@ package com.example.mybin.tampilan
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -133,7 +134,8 @@ private fun Body(navController: NavController) {
             imageRes = R.drawable.introawal,
             title = "Sampah plastik: Reduce dan Reuse dahulu sebelum Recycle",
             source = "Greenpeace",
-            date = "22 Juli 2022"
+            date = "22 Juli 2022",
+            onClick = { navController.navigate("news_detail_screen") }
         )
         Spacer(modifier = Modifier.height(16.dp))
         Box(contentAlignment = Alignment.BottomEnd) {
@@ -141,7 +143,8 @@ private fun Body(navController: NavController) {
                 imageRes = R.drawable.introawal,
                 title = "Menjaga Hutan untuk Masa Depan yang Lebih Baik",
                 source = "WWF Indonesia",
-                date = "15 Juli 2022"
+                date = "15 Juli 2022",
+                onClick = { navController.navigate("news_detail_screen") }
             )
             FloatingActionButton(
                 onClick = { navController.navigate("berita_anda_screen") },
@@ -156,9 +159,11 @@ private fun Body(navController: NavController) {
 }
 
 @Composable
-private fun NewsItem(imageRes: Int, title: String, source: String, date: String) {
+private fun NewsItem(imageRes: Int, title: String, source: String, date: String, onClick: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -199,9 +204,8 @@ private fun NewsItem(imageRes: Int, title: String, source: String, date: String)
                             )
                             Text(text = date, fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(start = 4.dp))
                         }
-                        IconButton(onClick = { /*TODO*/ }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "More", tint = Color.Gray)
-                        }
+
+
                     }
                 }
             }
