@@ -1,7 +1,6 @@
 package com.example.mybin.tampilan
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,7 +26,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -43,22 +41,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.example.mybin.model.BeritaItemData
 import com.example.mybin.ui.theme.MyBinTheme
-
-data class BeritaItemData(
-    val title: String,
-    val date: String,
-    val location: String,
-    val status: String
-)
+import com.example.mybin.viewmodel.BeritaViewModel
 
 @Composable
-fun BeritaAndaScreen(navController: NavController) {
-    val beritaList = listOf(
-        BeritaItemData("Barusan Nyetor Kesekian...", "16 Oktober 2025, 09:00 WIB", "", "Naskah"),
-        BeritaItemData("Lagi Ada Pengumpulan Sampah...", "15 Oktober 2025, 14:30 WIB", "Painan", "Diterbitkan"),
-        BeritaItemData("Selamat Hari Bumi", "2 Oktober 2025, 08:30 WIB", "Padang", "Diterbitkan")
-    )
+fun BeritaAndaScreen(navController: NavController, viewModel: BeritaViewModel) {
+    val beritaList = viewModel.beritaList
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopSection(navController)
@@ -187,10 +176,10 @@ private fun BeritaCard(navController: NavController, berita: BeritaItemData) {
                         Text(text = berita.status, color = statusTextColor, fontSize = 12.sp)
                     }
                     Row {
-                        TextButton(onClick = { navController.navigate("buat_berita_screen") }) {
+                        TextButton(onClick = { navController.navigate("edit_berita_screen/${berita.id}") }) {
                             Text("Edit", color = Color(0xFF4CAF50), fontWeight = FontWeight.Bold)
                         }
-                        TextButton(onClick = { /* TODO: Handle View Detail Click */ }) {
+                        TextButton(onClick = { navController.navigate("news_detail_screen?beritaId=${berita.id}") }) {
                             Text("Lihat Detail")
                         }
                     }
@@ -204,6 +193,6 @@ private fun BeritaCard(navController: NavController, berita: BeritaItemData) {
 @Composable
 fun BeritaAndaScreenPreview() {
     MyBinTheme {
-        BeritaAndaScreen(rememberNavController())
+        BeritaAndaScreen(rememberNavController(), BeritaViewModel())
     }
 }

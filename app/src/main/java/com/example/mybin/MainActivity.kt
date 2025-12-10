@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -30,6 +31,7 @@ import com.example.mybin.tampilan.ProfileScreen
 import com.example.mybin.tampilan.RecycleScreen
 import com.example.mybin.tampilan.SampahkuScreen
 import com.example.mybin.ui.theme.MyBinTheme
+import com.example.mybin.viewmodel.BeritaViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,6 +40,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             MyBinTheme {
                 val navController = rememberNavController()
+                val beritaViewModel: BeritaViewModel = viewModel()
+                
                 NavHost(navController = navController, startDestination = "OnboardingScreen") {
                     composable("OnboardingScreen") {
                         OnboardingScreen(navController)
@@ -58,16 +62,31 @@ class MainActivity : ComponentActivity() {
                         AddAddressScreen(navController)
                     }
                     composable("NewsScreen") {
-                        NewsScreen(navController)
+                        NewsScreen(navController, beritaViewModel)
                     }
-                    composable("news_detail_screen") {
-                        NewsDetailScreen(navController)
+                    composable(
+                        "news_detail_screen?beritaId={beritaId}",
+                        arguments = listOf(navArgument("beritaId") {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        })
+                    ) { backStackEntry ->
+                        val beritaId = backStackEntry.arguments?.getString("beritaId")
+                        NewsDetailScreen(navController, beritaViewModel, beritaId)
                     }
                     composable("berita_anda_screen") {
-                        BeritaAndaScreen(navController)
+                        BeritaAndaScreen(navController, beritaViewModel)
                     }
                     composable("buat_berita_screen") {
-                        BuatBeritaScreen(navController)
+                        BuatBeritaScreen(navController, beritaViewModel)
+                    }
+                    composable(
+                        "edit_berita_screen/{beritaId}",
+                        arguments = listOf(navArgument("beritaId") { type = NavType.StringType })
+                    ) { backStackEntry ->
+                        val beritaId = backStackEntry.arguments?.getString("beritaId")
+                        BuatBeritaScreen(navController, beritaViewModel, beritaId)
                     }
                      composable("notifikasi_screen") {
                         NotifikasiScreen(navController)

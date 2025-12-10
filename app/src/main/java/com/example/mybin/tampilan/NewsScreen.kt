@@ -1,5 +1,6 @@
 package com.example.mybin.tampilan
 
+import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -13,15 +14,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Eco
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material.icons.filled.Eco
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
@@ -41,11 +43,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import coil.compose.rememberAsyncImagePainter
 import com.example.mybin.R
 import com.example.mybin.ui.theme.MyBinTheme
+import com.example.mybin.viewmodel.BeritaViewModel
 
 @Composable
-fun NewsScreen(navController: NavController) {
+fun NewsScreen(navController: NavController, viewModel: BeritaViewModel) {
     Box(modifier = Modifier.fillMaxSize()) {
         Image(
             painter = painterResource(id = R.drawable.orang),
@@ -66,10 +70,10 @@ fun NewsScreen(navController: NavController) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = 80.dp) // Adjusted padding to make space for back button
+                .padding(top = 80.dp)
         ) {
             Header()
-            Body(navController)
+            Body(navController, viewModel)
         }
     }
 }
@@ -109,36 +113,37 @@ private fun Header() {
 }
 
 @Composable
-private fun Body(navController: NavController) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(top = 16.dp)
-            .background(
-                Color(0xFFF5F5F5),
-                shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp)
+private fun Body(navController: NavController, viewModel: BeritaViewModel) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 16.dp)
+                .background(
+                    Color(0xFFF5F5F5),
+                    shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp)
+                )
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            Text(
+                text = "News",
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF4CAF50),
+                modifier = Modifier.align(Alignment.CenterHorizontally)
             )
-            .padding(16.dp)
-    ) {
-        Text(
-            text = "News",
-            fontSize = 32.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF4CAF50),
-            modifier = Modifier.align(Alignment.CenterHorizontally)
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(text = "Trending", fontWeight = FontWeight.Bold, fontSize = 20.sp)
-        Spacer(modifier = Modifier.height(8.dp))
-        NewsItem(
-            imageRes = R.drawable.introawal,
-            title = "Sampah plastik: Reduce dan Reuse dahulu sebelum Recycle",
-            source = "Greenpeace",
-            date = "22 Juli 2022",
-            onClick = { navController.navigate("news_detail_screen") }
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Box(contentAlignment = Alignment.BottomEnd) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(text = "Trending", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+            Spacer(modifier = Modifier.height(8.dp))
+            NewsItem(
+                imageRes = R.drawable.introawal,
+                title = "Sampah plastik: Reduce dan Reuse dahulu sebelum Recycle",
+                source = "Greenpeace",
+                date = "22 Juli 2022",
+                onClick = { navController.navigate("news_detail_screen") }
+            )
+            Spacer(modifier = Modifier.height(16.dp))
             NewsItem(
                 imageRes = R.drawable.introawal,
                 title = "Menjaga Hutan untuk Masa Depan yang Lebih Baik",
@@ -146,20 +151,41 @@ private fun Body(navController: NavController) {
                 date = "15 Juli 2022",
                 onClick = { navController.navigate("news_detail_screen") }
             )
-            FloatingActionButton(
-                onClick = { navController.navigate("berita_anda_screen") },
-                modifier = Modifier.padding(16.dp),
-                shape = CircleShape,
-                containerColor = Color(0xFF4CAF50)
-            ) {
-                Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color.White)
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(text = "Berita Terbaru", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            viewModel.beritaList.forEach { berita ->
+                NewsItem(
+                    imageRes = R.drawable.introawal,
+                    title = berita.title,
+                    source = if (berita.location.isNotEmpty()) berita.location else "User",
+                    date = berita.date,
+                    imageUri = berita.imageUri,
+                    onClick = { navController.navigate("news_detail_screen?beritaId=${berita.id}") }
+                )
+                Spacer(modifier = Modifier.height(16.dp))
             }
+
+            Spacer(modifier = Modifier.height(80.dp))
+        }
+
+        FloatingActionButton(
+            onClick = { navController.navigate("berita_anda_screen") },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp),
+            shape = CircleShape,
+            containerColor = Color(0xFF4CAF50)
+        ) {
+            Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color.White)
         }
     }
 }
 
 @Composable
-private fun NewsItem(imageRes: Int, title: String, source: String, date: String, onClick: () -> Unit) {
+private fun NewsItem(imageRes: Int, title: String, source: String, date: String, imageUri: String? = null, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -169,8 +195,14 @@ private fun NewsItem(imageRes: Int, title: String, source: String, date: String,
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
+            val painter = if (imageUri != null) {
+                rememberAsyncImagePainter(model = Uri.parse(imageUri))
+            } else {
+                painterResource(id = imageRes)
+            }
+            
             Image(
-                painter = painterResource(id = imageRes),
+                painter = painter,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
@@ -204,8 +236,6 @@ private fun NewsItem(imageRes: Int, title: String, source: String, date: String,
                             )
                             Text(text = date, fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(start = 4.dp))
                         }
-
-
                     }
                 }
             }
@@ -217,6 +247,6 @@ private fun NewsItem(imageRes: Int, title: String, source: String, date: String,
 @Composable
 fun NewsScreenPreview() {
     MyBinTheme {
-        NewsScreen(rememberNavController())
+        NewsScreen(rememberNavController(), BeritaViewModel())
     }
 }
