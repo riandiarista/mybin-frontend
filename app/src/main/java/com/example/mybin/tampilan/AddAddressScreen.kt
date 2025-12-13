@@ -1,6 +1,9 @@
 package com.example.mybin.tampilan
 
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,21 +19,57 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.example.mybin.model.SampahData
 import com.example.mybin.ui.theme.MyBinTheme
+import com.example.mybin.viewmodel.SampahViewModel
+import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddAddressScreen(navController: NavController) {
+fun AddAddressScreen(navController: NavController, sampahViewModel: SampahViewModel = viewModel(), sampahIds: String?, totalKoin: Int?) {
     var hariTanggal by remember { mutableStateOf("") }
+    var jam by remember { mutableStateOf("") }
     var phoneNumber by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
+    val selectedSampahList = remember { mutableStateListOf<SampahData>() }
+
+    val context = LocalContext.current
+    val calendar = Calendar.getInstance()
+
+    val datePickerDialog = DatePickerDialog(
+        context,
+        { _, year, month, dayOfMonth ->
+            hariTanggal = "$dayOfMonth/${month + 1}/$year"
+        },
+        calendar.get(Calendar.YEAR),
+        calendar.get(Calendar.MONTH),
+        calendar.get(Calendar.DAY_OF_MONTH)
+    )
+
+    val timePickerDialog = TimePickerDialog(
+        context,
+        { _, hour, minute ->
+            jam = String.format("%02d:%02d", hour, minute)
+        },
+        calendar.get(Calendar.HOUR_OF_DAY),
+        calendar.get(Calendar.MINUTE),
+        true
+    )
+
+    LaunchedEffect(sampahIds) {
+        sampahIds?.split(",")?.forEach { id ->
+            sampahViewModel.getSampahById(id)?.let { selectedSampahList.add(it) }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -49,8 +88,6 @@ fun AddAddressScreen(navController: NavController) {
                     }
                 },
                 actions = {
-                    // This spacer is used to balance the title in the center,
-                    // as the navigation icon takes up space.
                     Spacer(modifier = Modifier.width(48.dp))
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
@@ -73,7 +110,9 @@ fun AddAddressScreen(navController: NavController) {
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                    InfoRow(icon = Icons.Default.PersonOutline, label = "Hari & Tanggal", value = hariTanggal, onValueChange = { hariTanggal = it })
+                    PickerInfoRow(icon = Icons.Default.DateRange, label = "Hari & Tanggal", value = hariTanggal, onClick = { datePickerDialog.show() })
+                    Divider(color = Color.LightGray.copy(alpha = 0.4f), thickness = 1.dp, modifier = Modifier.padding(horizontal = 16.dp))
+                    PickerInfoRow(icon = Icons.Default.AccessTime, label = "Jam", value = jam, onClick = { timePickerDialog.show() })
                     Divider(color = Color.LightGray.copy(alpha = 0.4f), thickness = 1.dp, modifier = Modifier.padding(horizontal = 16.dp))
                     InfoRow(icon = Icons.Default.Phone, label = "Phone number", value = phoneNumber, onValueChange = { phoneNumber = it })
                     Divider(color = Color.LightGray.copy(alpha = 0.4f), thickness = 1.dp, modifier = Modifier.padding(horizontal = 16.dp))
@@ -81,13 +120,9 @@ fun AddAddressScreen(navController: NavController) {
                 }
             }
             Spacer(modifier = Modifier.height(24.dp))
-            RingkasanSampahDropdown()
-            Spacer(modifier = Modifier.height(16.dp))
-            SampahItem(icon = Icons.Default.Eco, category = "An Organik", name = "Botol Plastik", weight = "1.5 Kg", backgroundColor = Color(0xFFE6F8F0), iconColor = Color(0xFF2EBD70))
-            Spacer(modifier = Modifier.height(12.dp))
-            SampahItem(icon = Icons.Default.Spa, category = "Organik", name = "Rumput", weight = "5.0 Kg", backgroundColor = Color(0xFFFFF0F5), iconColor = Color.Magenta.copy(alpha = 0.7f))
+            RingkasanSampahDropdown(selectedSampahList)
             Spacer(modifier = Modifier.height(24.dp))
-            EstimasiPointsCard()
+            totalKoin?.let { EstimasiPointsCard(it) }
             Spacer(modifier = Modifier.height(24.dp))
             Button(
                 onClick = { /*TODO*/ },
@@ -101,6 +136,24 @@ fun AddAddressScreen(navController: NavController) {
             }
              Spacer(modifier = Modifier.height(16.dp))
         }
+    }
+}
+
+@Composable
+private fun PickerInfoRow(icon: ImageVector, label: String, value: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(icon, contentDescription = label, tint = Color.Gray)
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(
+            text = value.ifEmpty { label },
+            color = if (value.isEmpty()) Color.Gray else Color.Black
+        )
     }
 }
 
@@ -124,34 +177,55 @@ private fun InfoRow(icon: ImageVector, label: String, value: String, onValueChan
 }
 
 @Composable
-private fun RingkasanSampahDropdown() {
+private fun RingkasanSampahDropdown(selectedSampahList: List<SampahData>) {
+    var expanded by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Language, contentDescription = "Ringkasan Sampah", tint = Color.Gray)
-                Spacer(modifier = Modifier.width(16.dp))
-                Text("Ringkasan Sampah", color = Color.Gray, fontSize = 16.sp)
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Language, contentDescription = "Ringkasan Sampah", tint = Color.Gray)
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text("Ringkasan Sampah", color = Color.Gray, fontSize = 16.sp)
+                }
+                IconButton(onClick = { expanded = !expanded }) {
+                    Icon(if (expanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown, contentDescription = "Dropdown", tint = Color.Gray)
+                }
             }
-            Icon(Icons.Default.ArrowDropDown, contentDescription = "Dropdown", tint = Color.Gray)
+            if (expanded) {
+                selectedSampahList.forEach { sampah ->
+                    SampahItem(
+                        category = sampah.jenisSampah,
+                        name = sampah.detailSampah,
+                        weight = sampah.totalBobot
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun SampahItem(icon: ImageVector, category: String, name: String, weight: String, backgroundColor: Color, iconColor: Color) {
+private fun SampahItem(category: String, name: String, weight: String) {
+    val (icon, backgroundColor, iconColor) = when (category) {
+        "Anorganik" -> Triple(Icons.Default.Eco, Color(0xFFE6F8F0), Color(0xFF2EBD70))
+        "Organik" -> Triple(Icons.Default.Spa, Color(0xFFFFF0F5), Color.Magenta.copy(alpha = 0.7f))
+        else -> Triple(Icons.Default.Warning, Color.LightGray, Color.Black)
+    }
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -176,7 +250,7 @@ private fun SampahItem(icon: ImageVector, category: String, name: String, weight
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(category, fontSize = 12.sp, color = Color(0xFF2EBD70))
+                Text(category, fontSize = 12.sp, color = iconColor)
                 Text(name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 Text(weight, fontSize = 14.sp, color = Color.Gray)
             }
@@ -185,7 +259,7 @@ private fun SampahItem(icon: ImageVector, category: String, name: String, weight
 }
 
 @Composable
-private fun EstimasiPointsCard() {
+private fun EstimasiPointsCard(totalKoin: Int) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -214,7 +288,7 @@ private fun EstimasiPointsCard() {
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        "1,500",
+                        text = totalKoin.toString(),
                         fontSize = 36.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = Color(0xFF1B5E20)
@@ -229,6 +303,6 @@ private fun EstimasiPointsCard() {
 @Composable
 fun AddAddressScreenPreview() {
     MyBinTheme {
-        AddAddressScreen(rememberNavController())
+        AddAddressScreen(rememberNavController(), viewModel(), null, 0)
     }
 }

@@ -60,8 +60,19 @@ class MainActivity : ComponentActivity() {
                     composable("DataSetoranScreen") {
                         DataSetoranScreen(navController)
                     }
-                    composable("AddAddressScreen") {
-                        AddAddressScreen(navController)
+                    composable(
+                        "AddAddressScreen?sampahIds={sampahIds}&totalKoin={totalKoin}",
+                        arguments = listOf(
+                            navArgument("sampahIds") { type = NavType.StringType; nullable = true },
+                            navArgument("totalKoin") { type = NavType.IntType; defaultValue = 0 }
+                        )
+                    ) { backStackEntry ->
+                        AddAddressScreen(
+                            navController = navController,
+                            sampahViewModel = sampahViewModel,
+                            sampahIds = backStackEntry.arguments?.getString("sampahIds"),
+                            totalKoin = backStackEntry.arguments?.getInt("totalKoin")
+                        )
                     }
                     composable("NewsScreen") {
                         NewsScreen(navController, beritaViewModel)
@@ -100,7 +111,7 @@ class MainActivity : ComponentActivity() {
                         PengaturanAkunScreen(navController)
                     }
                     composable("pilih_setoran_screen") {
-                        PilihSetoranScreen(navController)
+                        PilihSetoranScreen(navController, sampahViewModel)
                     }
                     composable(
                         "edit_sampah_screen/{sampahId}",
