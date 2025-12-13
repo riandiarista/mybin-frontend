@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -207,9 +208,9 @@ fun SwipeBackground(dismissState: SwipeToDismissBoxState) {
 @Composable
 fun SampahItemCard(item: SampahData, modifier: Modifier = Modifier) {
     val jenisColor = when (item.jenisSampah) {
-        "An Organik" -> Color(0xFF4CAF50)
+        "Anorganik" -> Color(0xFF4CAF50)
         "Organik" -> Color.Green
-        "Sampah B3" -> Color.Red
+        "B3" -> Color.Red
         else -> Color.Gray
     }
     
@@ -242,10 +243,29 @@ fun SampahItemCard(item: SampahData, modifier: Modifier = Modifier) {
                 )
             }
             Spacer(modifier = Modifier.width(16.dp))
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(text = item.jenisSampah, color = jenisColor, fontSize = 12.sp)
                 Text(text = item.detailSampah, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 Text(text = item.totalBobot, color = Color.Gray, fontSize = 14.sp)
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(horizontalAlignment = Alignment.End) {
+                Text(text = "Koin", fontSize = 12.sp, color = Color.Gray)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.MonetizationOn,
+                        contentDescription = "Koin",
+                        tint = Color(0xFFFFC107),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = item.estimasiKoin.toString(),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = Color(0xFFFFC107)
+                    )
+                }
             }
         }
     }

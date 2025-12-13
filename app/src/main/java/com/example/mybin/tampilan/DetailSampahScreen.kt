@@ -225,12 +225,22 @@ fun DetailSampahScreen(navController: NavController, jenisSampah: String, harga:
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Button(
-                    onClick = { 
+                    onClick = {
+                        val bobot = totalBobot.toFloatOrNull() ?: 0f
+                        val koinPerKg = when (jenisSampah) {
+                            "Organik" -> 1000
+                            "Anorganik" -> 2000
+                            "B3" -> 1500
+                            else -> 0
+                        }
+                        val estimasiKoin = (bobot * koinPerKg).toInt()
+
                         val newSampah = SampahData(
                             jenisSampah = jenisSampah,
                             detailSampah = detailSampah,
                             totalBobot = "$totalBobot Kg",
-                            imageUri = imageUri
+                            imageUri = imageUri,
+                            estimasiKoin = estimasiKoin
                         )
                         sampahViewModel.addSampah(newSampah)
                         navController.popBackStack()

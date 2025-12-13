@@ -107,12 +107,15 @@ class MainActivity : ComponentActivity() {
                         arguments = listOf(
                             navArgument("sampahId") { type = NavType.StringType }
                         )
-                    ) {
-                        EditSampahScreen(
-                            navController,
-                            it.arguments?.getString("sampahId"),
-                            sampahViewModel
-                        )
+                    ) { backStackEntry ->
+                        val sampahId = backStackEntry.arguments?.getString("sampahId")
+                        if (sampahId != null) {
+                            EditSampahScreen(
+                                navController,
+                                sampahId,
+                                sampahViewModel
+                            )
+                        }
                     }
                     composable("RecycleScreen") {
                         RecycleScreen(navController)

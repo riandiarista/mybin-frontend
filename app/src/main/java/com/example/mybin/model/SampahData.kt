@@ -8,5 +8,6 @@ data class SampahData(
     val jenisSampah: String,
     val detailSampah: String,
     val totalBobot: String,
-    val imageUri: Uri?
+    val imageUri: Uri?,
+    val estimasiKoin: Int
 )
