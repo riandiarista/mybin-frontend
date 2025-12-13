@@ -28,6 +28,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,9 +44,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.mybin.R
+import com.example.mybin.viewmodel.SampahViewModel
 import com.example.mybin.ui.theme.MyBinTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,12 +56,21 @@ import com.example.mybin.ui.theme.MyBinTheme
 fun EditSampahScreen(
     navController: NavController,
     sampahId: String?,
-    jenisSampah: String?,
-    namaSampah: String?,
-    beratSampah: String?
+    sampahViewModel: SampahViewModel
 ) {
-    var detailSampah by remember { mutableStateOf(namaSampah ?: "") }
-    var totalBobot by remember { mutableStateOf(beratSampah?.replace(" Kg", "") ?: "") }
+    val sampah = sampahViewModel.getSampahById(sampahId)
+
+    var detailSampah by remember { mutableStateOf("") }
+    var totalBobot by remember { mutableStateOf("") }
+    var jenisSampah by remember { mutableStateOf("") }
+
+    LaunchedEffect(sampah) {
+        sampah?.let {
+            detailSampah = it.detailSampah
+            totalBobot = it.totalBobot.replace(" Kg", "")
+            jenisSampah = it.jenisSampah
+        }
+    }
 
     val harga = when (jenisSampah) {
         "Organik" -> "1000/kg"
@@ -169,7 +181,16 @@ fun EditSampahScreen(
             Spacer(modifier = Modifier.weight(1f))
 
             Button(
-                onClick = { navController.popBackStack() },
+                onClick = {
+                    sampah?.let {
+                        val updatedSampah = it.copy(
+                            detailSampah = detailSampah,
+                            totalBobot = "$totalBobot Kg"
+                        )
+                        sampahViewModel.updateSampah(updatedSampah)
+                    }
+                    navController.popBackStack()
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -186,6 +207,6 @@ fun EditSampahScreen(
 @Composable
 fun EditSampahScreenPreview() {
     MyBinTheme {
-        EditSampahScreen(rememberNavController(), "1", "An Organik", "Botol Plastik", "1.5 Kg")
+        EditSampahScreen(rememberNavController(), "1", viewModel())
     }
 }

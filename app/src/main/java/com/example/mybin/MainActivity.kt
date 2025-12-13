@@ -103,20 +103,15 @@ class MainActivity : ComponentActivity() {
                         PilihSetoranScreen(navController)
                     }
                     composable(
-                        "edit_sampah_screen/{sampahId}/{jenisSampah}/{namaSampah}/{beratSampah}",
+                        "edit_sampah_screen/{sampahId}",
                         arguments = listOf(
-                            navArgument("sampahId") { type = NavType.StringType },
-                            navArgument("jenisSampah") { type = NavType.StringType },
-                            navArgument("namaSampah") { type = NavType.StringType },
-                            navArgument("beratSampah") { type = NavType.StringType },
+                            navArgument("sampahId") { type = NavType.StringType }
                         )
                     ) {
                         EditSampahScreen(
-                            navController, 
+                            navController,
                             it.arguments?.getString("sampahId"),
-                            it.arguments?.getString("jenisSampah"),
-                            it.arguments?.getString("namaSampah"),
-                            it.arguments?.getString("beratSampah"),
+                            sampahViewModel
                         )
                     }
                     composable("RecycleScreen") {

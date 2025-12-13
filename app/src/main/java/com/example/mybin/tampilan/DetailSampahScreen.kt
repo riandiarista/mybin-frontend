@@ -56,6 +56,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.mybin.R
+import com.example.mybin.model.SampahData
 import com.example.mybin.ui.theme.MyBinTheme
 import com.example.mybin.viewmodel.SampahViewModel
 import java.io.File
@@ -225,8 +226,14 @@ fun DetailSampahScreen(navController: NavController, jenisSampah: String, harga:
 
                 Button(
                     onClick = { 
-                        sampahViewModel.addSampah(jenisSampah, detailSampah, totalBobot, imageUri)
-                        navController.popBackStack() 
+                        val newSampah = SampahData(
+                            jenisSampah = jenisSampah,
+                            detailSampah = detailSampah,
+                            totalBobot = "$totalBobot Kg",
+                            imageUri = imageUri
+                        )
+                        sampahViewModel.addSampah(newSampah)
+                        navController.popBackStack()
                     },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),

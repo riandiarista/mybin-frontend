@@ -120,7 +120,7 @@ fun SampahkuScreen(navController: NavController, sampahViewModel: SampahViewMode
                     confirmValueChange = { dismissValue ->
                         when(dismissValue) {
                             SwipeToDismissBoxValue.StartToEnd -> {
-                                // TODO: Navigate to an edit screen if it exists
+                                navController.navigate("edit_sampah_screen/${item.id}")
                                 false
                             }
                             SwipeToDismissBoxValue.EndToStart -> {
