@@ -32,6 +32,7 @@ import com.example.mybin.tampilan.RecycleScreen
 import com.example.mybin.tampilan.SampahkuScreen
 import com.example.mybin.ui.theme.MyBinTheme
 import com.example.mybin.viewmodel.BeritaViewModel
+import com.example.mybin.viewmodel.SampahViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,7 +42,8 @@ class MainActivity : ComponentActivity() {
             MyBinTheme {
                 val navController = rememberNavController()
                 val beritaViewModel: BeritaViewModel = viewModel()
-                
+                val sampahViewModel: SampahViewModel = viewModel()
+
                 NavHost(navController = navController, startDestination = "OnboardingScreen") {
                     composable("OnboardingScreen") {
                         OnboardingScreen(navController)
@@ -132,10 +134,10 @@ class MainActivity : ComponentActivity() {
                     ) {
                         val jenisSampah = it.arguments?.getString("jenisSampah") ?: ""
                         val harga = it.arguments?.getString("harga") ?: ""
-                        DetailSampahScreen(navController, jenisSampah, harga)
+                        DetailSampahScreen(navController, jenisSampah, harga, sampahViewModel)
                     }
                     composable("SampahkuScreen") {
-                        SampahkuScreen(navController)
+                        SampahkuScreen(navController, sampahViewModel)
                     }
                     composable("ExchangeScreen") {
                         ExchangeScreen(navController)

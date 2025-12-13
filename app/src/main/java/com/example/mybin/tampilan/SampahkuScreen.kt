@@ -50,6 +50,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -57,30 +58,19 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import coil.compose.rememberAsyncImagePainter
 import com.example.mybin.R
+import com.example.mybin.model.SampahData
 import com.example.mybin.ui.theme.MyBinTheme
-
-data class SampahData(
-    val id: Int,
-    val jenis: String,
-    val nama: String,
-    val berat: String,
-    val imageRes: Int,
-    val jenisColor: Color
-)
+import com.example.mybin.viewmodel.SampahViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SampahkuScreen(navController: NavController) {
-    var sampleData by remember { mutableStateOf(listOf(
-        SampahData(1, "An Organik", "Botol Plastik", "1.5 Kg", R.drawable.introawal, Color(0xFF4CAF50)),
-        SampahData(2, "Organik", "Rumput", "5.0 Kg", R.drawable.introawal, Color.Green),
-        SampahData(3, "Sampah B3", "Baterai", "1.50 Kg", R.drawable.introawal, Color.Red),
-        SampahData(4, "An Organik", "Botol Plastik", "1.5 Kg", R.drawable.introawal, Color(0xFF4CAF50)),
-        SampahData(5, "An Organik", "Botol Plastik", "1.5 Kg", R.drawable.introawal, Color(0xFF4CAF50))
-    )) }
+fun SampahkuScreen(navController: NavController, sampahViewModel: SampahViewModel = viewModel()) {
+    val sampleData = sampahViewModel.sampahList
     var showDeleteDialog by remember { mutableStateOf(false) }
     var itemToDelete by remember { mutableStateOf<SampahData?>(null) }
 
@@ -124,13 +114,13 @@ fun SampahkuScreen(navController: NavController) {
                 .background(Color(0xFFF5F5F5))
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
+        ) { 
             items(sampleData, key = { it.id }) { item ->
                 val dismissState = rememberSwipeToDismissBoxState(
                     confirmValueChange = { dismissValue ->
                         when(dismissValue) {
                             SwipeToDismissBoxValue.StartToEnd -> {
-                                navController.navigate("edit_sampah_screen/${item.id}/${item.jenis}/${item.nama}/${item.berat}")
+                                // TODO: Navigate to an edit screen if it exists
                                 false
                             }
                             SwipeToDismissBoxValue.EndToStart -> {
@@ -157,7 +147,7 @@ fun SampahkuScreen(navController: NavController) {
         DeleteConfirmationDialog(
             onConfirm = {
                 itemToDelete?.let { item ->
-                    sampleData = sampleData.filterNot { it.id == item.id }
+                    sampahViewModel.deleteSampah(item.id)
                 }
                 showDeleteDialog = false
                 itemToDelete = null
@@ -216,6 +206,13 @@ fun SwipeBackground(dismissState: SwipeToDismissBoxState) {
 
 @Composable
 fun SampahItemCard(item: SampahData, modifier: Modifier = Modifier) {
+    val jenisColor = when (item.jenisSampah) {
+        "An Organik" -> Color(0xFF4CAF50)
+        "Organik" -> Color.Green
+        "Sampah B3" -> Color.Red
+        else -> Color.Gray
+    }
+    
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -226,18 +223,29 @@ fun SampahItemCard(item: SampahData, modifier: Modifier = Modifier) {
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Image(
-                painter = painterResource(id = item.imageRes),
-                contentDescription = item.nama,
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(CircleShape)
-            )
+            if (item.imageUri != null) {
+                Image(
+                    painter = rememberAsyncImagePainter(item.imageUri),
+                    contentDescription = item.detailSampah,
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Image(
+                    painter = painterResource(id = R.drawable.introawal),
+                    contentDescription = item.detailSampah,
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(CircleShape)
+                )
+            }
             Spacer(modifier = Modifier.width(16.dp))
             Column {
-                Text(text = item.jenis, color = item.jenisColor, fontSize = 12.sp)
-                Text(text = item.nama, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Text(text = item.berat, color = Color.Gray, fontSize = 14.sp)
+                Text(text = item.jenisSampah, color = jenisColor, fontSize = 12.sp)
+                Text(text = item.detailSampah, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(text = item.totalBobot, color = Color.Gray, fontSize = 14.sp)
             }
         }
     }
@@ -304,6 +312,6 @@ fun DeleteConfirmationDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
 @Composable
 fun SampahkuScreenPreview() {
     MyBinTheme {
-        SampahkuScreen(rememberNavController())
+        SampahkuScreen(rememberNavController(), viewModel())
     }
 }

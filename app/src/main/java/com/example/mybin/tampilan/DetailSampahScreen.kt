@@ -1,5 +1,9 @@
 package com.example.mybin.tampilan
 
+import android.content.Context
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -35,8 +39,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -44,15 +50,46 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.FileProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import coil.compose.rememberAsyncImagePainter
 import com.example.mybin.R
 import com.example.mybin.ui.theme.MyBinTheme
+import com.example.mybin.viewmodel.SampahViewModel
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
-fun DetailSampahScreen(navController: NavController, jenisSampah: String, harga: String) {
+fun DetailSampahScreen(navController: NavController, jenisSampah: String, harga: String, sampahViewModel: SampahViewModel = viewModel()) {
     var detailSampah by remember { mutableStateOf("") }
     var totalBobot by remember { mutableStateOf("") }
+    var imageUri by remember { mutableStateOf<Uri?>(null) }
+    var tempImageUri by remember { mutableStateOf<Uri?>(null) }
+    val context = LocalContext.current
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+        onResult = { uri -> imageUri = uri }
+    )
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture(),
+        onResult = { success ->
+            if (success) {
+                imageUri = tempImageUri
+            }
+        }
+    )
+
+    fun createImageFile(context: Context): File {
+        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+        val storageDir = context.cacheDir
+        return File.createTempFile("JPEG_${timeStamp}_", ".jpg", storageDir)
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Image(
@@ -90,8 +127,8 @@ fun DetailSampahScreen(navController: NavController, jenisSampah: String, harga:
 
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(top = 100.dp)
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
                 .background(
                     Color(0xFFE8F5E9), // Light green background
                     shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp)
@@ -140,16 +177,44 @@ fun DetailSampahScreen(navController: NavController, jenisSampah: String, harga:
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                if (imageUri != null) {
+                    Image(
+                        painter = rememberAsyncImagePainter(imageUri),
+                        contentDescription = "Selected Image",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(150.dp)
+                            .clip(RoundedCornerShape(16.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
                 Text("Upload Foto Sampah", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 Text("Bisa berupa foto atau dokumen pendukung", fontSize = 12.sp, color = Color.Gray)
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Button(onClick = { /*TODO*/ }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color.White), shape = RoundedCornerShape(16.dp)) {
+                    Button(
+                        onClick = { galleryLauncher.launch("image/*") },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
                         Icon(Icons.Default.Folder, contentDescription = "Pilih Foto", tint = Color.Black)
                         Spacer(modifier = Modifier.size(8.dp))
                         Text("Pilih Foto", color = Color.Black)
                     }
-                    Button(onClick = { /*TODO*/ }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color.White), shape = RoundedCornerShape(16.dp)) {
+                    Button(
+                        onClick = {
+                            val photoFile = createImageFile(context)
+                            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", photoFile)
+                            tempImageUri = uri
+                            cameraLauncher.launch(uri)
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
                         Icon(Icons.Default.CameraAlt, contentDescription = "Kamera", tint = Color.Black)
                         Spacer(modifier = Modifier.size(8.dp))
                         Text("Kamera", color = Color.Black)
@@ -159,10 +224,13 @@ fun DetailSampahScreen(navController: NavController, jenisSampah: String, harga:
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Button(
-                    onClick = { /*TODO*/ },
+                    onClick = { 
+                        sampahViewModel.addSampah(jenisSampah, detailSampah, totalBobot, imageUri)
+                        navController.popBackStack() 
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Text("Tambahkan", color = Color.White, fontSize = 18.sp)
                 }
@@ -175,6 +243,6 @@ fun DetailSampahScreen(navController: NavController, jenisSampah: String, harga:
 @Composable
 fun DetailSampahScreenPreview() {
     MyBinTheme {
-        DetailSampahScreen(rememberNavController(), "Organik", "1000/kg")
+        DetailSampahScreen(rememberNavController(), "Organik", "1000/kg", viewModel())
     }
 }
