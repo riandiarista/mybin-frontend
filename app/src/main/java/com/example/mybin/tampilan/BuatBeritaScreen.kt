@@ -1,6 +1,8 @@
 package com.example.mybin.tampilan
 
 import android.annotation.SuppressLint
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -25,10 +27,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material3.Button
@@ -68,6 +71,7 @@ import com.example.mybin.ui.theme.MyBinTheme
 import com.example.mybin.viewmodel.BeritaViewModel
 import java.io.File
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -77,6 +81,8 @@ fun BuatBeritaScreen(navController: NavController, viewModel: BeritaViewModel, b
     var deskripsi by remember { mutableStateOf("") }
     var lokasi by remember { mutableStateOf("") }
     var imageUri by remember { mutableStateOf<Uri?>(null) }
+    var tanggal by remember { mutableStateOf("") }
+    var waktu by remember { mutableStateOf("") }
 
     LaunchedEffect(beritaId) {
         if (beritaId != null) {
@@ -87,6 +93,11 @@ fun BuatBeritaScreen(navController: NavController, viewModel: BeritaViewModel, b
                 lokasi = berita.location
                 if (berita.imageUri != null) {
                     imageUri = Uri.parse(berita.imageUri)
+                }
+                val dateParts = berita.date.split(", ")
+                if (dateParts.size == 2) {
+                    tanggal = dateParts[0]
+                    waktu = dateParts[1].replace(" WIB", "")
                 }
             }
         }
@@ -115,6 +126,14 @@ fun BuatBeritaScreen(navController: NavController, viewModel: BeritaViewModel, b
             CustomTextField(label = "Judul Kegiatan", value = judul, onValueChange = { judul = it })
             Spacer(modifier = Modifier.height(16.dp))
             CustomTextField(label = "Deskripsi Detail", value = deskripsi, onValueChange = { deskripsi = it }, singleLine = false)
+            Spacer(modifier = Modifier.height(16.dp))
+
+            DateTimeSection(
+                tanggal = tanggal,
+                waktu = waktu,
+                onTanggalChange = { tanggal = it },
+                onWaktuChange = { waktu = it }
+            )
             Spacer(modifier = Modifier.height(24.dp))
 
             EducationSection(
@@ -131,9 +150,9 @@ fun BuatBeritaScreen(navController: NavController, viewModel: BeritaViewModel, b
                     if (judul.isNotBlank()) {
                         val imageString = imageUri?.toString()
                         if (beritaId != null) {
-                            viewModel.updateBerita(beritaId, judul, deskripsi, lokasi, imageString)
+                            viewModel.updateBerita(beritaId, judul, deskripsi, lokasi, imageString, tanggal, waktu)
                         } else {
-                            viewModel.addBerita(judul, deskripsi, lokasi, imageString)
+                            viewModel.addBerita(judul, deskripsi, lokasi, imageString, tanggal, waktu)
                         }
                         navController.popBackStack()
                     }
@@ -190,6 +209,69 @@ private fun CustomTextField(label: String, value: String, onValueChange: (String
             singleLine = singleLine,
             minLines = if (!singleLine) 5 else 1
         )
+    }
+}
+
+@Composable
+private fun DateTimeSection(
+    tanggal: String,
+    waktu: String,
+    onTanggalChange: (String) -> Unit,
+    onWaktuChange: (String) -> Unit
+) {
+    val context = LocalContext.current
+    val calendar = Calendar.getInstance()
+    val year = calendar.get(Calendar.YEAR)
+    val month = calendar.get(Calendar.MONTH)
+    val day = calendar.get(Calendar.DAY_OF_MONTH)
+    val hour = calendar.get(Calendar.HOUR_OF_DAY)
+    val minute = calendar.get(Calendar.MINUTE)
+
+    val datePickerDialog = DatePickerDialog(
+        context,
+        { _, y, m, d ->
+            val selectedDate = Calendar.getInstance()
+            selectedDate.set(y, m, d)
+            val dateFormat = SimpleDateFormat("d MMMM yyyy", Locale("id", "ID"))
+            onTanggalChange(dateFormat.format(selectedDate.time))
+        },
+        year, month, day
+    )
+
+    val timePickerDialog = TimePickerDialog(
+        context,
+        { _, h, m -> onWaktuChange("$h:$m") },
+        hour, minute, true
+    )
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text("Tanggal Kegiatan", fontWeight = FontWeight.Medium, fontSize = 14.sp, modifier = Modifier.padding(bottom = 8.dp))
+            OutlinedButton(
+                onClick = { datePickerDialog.show() },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(Icons.Default.DateRange, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(if (tanggal.isNotBlank()) tanggal else "Pilih Tanggal")
+            }
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text("Waktu Kegiatan", fontWeight = FontWeight.Medium, fontSize = 14.sp, modifier = Modifier.padding(bottom = 8.dp))
+            OutlinedButton(
+                onClick = { timePickerDialog.show() },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(Icons.Default.AccessTime, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(if (waktu.isNotBlank()) waktu else "Pilih Waktu")
+            }
+        }
     }
 }
 

@@ -6,6 +6,7 @@ import com.example.mybin.model.BeritaItemData
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.UUID
 
 class BeritaViewModel : ViewModel() {
     private val _beritaList = mutableStateListOf<BeritaItemData>()
@@ -18,30 +19,35 @@ class BeritaViewModel : ViewModel() {
         _beritaList.add(BeritaItemData(title = "Selamat Hari Bumi", description = "Perayaan hari bumi...", date = "2 Oktober 2025, 08:30 WIB", location = "Padang", status = "Diterbitkan"))
     }
 
-    fun addBerita(judul: String, deskripsi: String, lokasi: String, imageUri: String? = null) {
-        val dateFormat = SimpleDateFormat("dd MMMM yyyy, HH:mm z", Locale("id", "ID"))
-        val currentDate = dateFormat.format(Date())
+    fun addBerita(judul: String, deskripsi: String, lokasi: String, imageUri: String?, tanggal: String, waktu: String) {
+        val date = if (tanggal.isNotBlank() && waktu.isNotBlank()) "$tanggal, $waktu WIB" else {
+            val dateFormat = SimpleDateFormat("dd MMMM yyyy, HH:mm z", Locale("id", "ID"))
+            dateFormat.format(Date())
+        }
         val newBerita = BeritaItemData(
+            id = UUID.randomUUID().toString(),
             title = judul,
             description = deskripsi,
-            date = currentDate,
+            date = date,
             location = lokasi,
-            status = "Diterbitkan", // Default status menjadi Diterbitkan
+            status = "Diterbitkan",
             imageUri = imageUri
         )
         _beritaList.add(0, newBerita)
     }
 
-    fun updateBerita(id: String, judul: String, deskripsi: String, lokasi: String, imageUri: String? = null) {
+    fun updateBerita(id: String, judul: String, deskripsi: String, lokasi: String, imageUri: String?, tanggal: String, waktu: String) {
         val index = _beritaList.indexOfFirst { it.id == id }
         if (index != -1) {
             val oldBerita = _beritaList[index]
+            val date = if (tanggal.isNotBlank() && waktu.isNotBlank()) "$tanggal, $waktu WIB" else oldBerita.date
             _beritaList[index] = oldBerita.copy(
-                title = judul, 
-                description = deskripsi, 
-                location = lokasi, 
+                title = judul,
+                description = deskripsi,
+                location = lokasi,
                 status = "Diterbitkan",
-                imageUri = imageUri ?: oldBerita.imageUri // Keep old image if new one is not provided
+                imageUri = imageUri ?: oldBerita.imageUri, // Keep old image if new one is not provided
+                date = date
             )
         }
     }
