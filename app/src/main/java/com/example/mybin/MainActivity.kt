@@ -33,6 +33,7 @@ import com.example.mybin.tampilan.SampahkuScreen
 import com.example.mybin.ui.theme.MyBinTheme
 import com.example.mybin.viewmodel.BeritaViewModel
 import com.example.mybin.viewmodel.SampahViewModel
+import com.example.mybin.viewmodel.SetoranViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -43,6 +44,7 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
                 val beritaViewModel: BeritaViewModel = viewModel()
                 val sampahViewModel: SampahViewModel = viewModel()
+                val setoranViewModel: SetoranViewModel = viewModel()
 
                 NavHost(navController = navController, startDestination = "OnboardingScreen") {
                     composable("OnboardingScreen") {
@@ -58,7 +60,7 @@ class MainActivity : ComponentActivity() {
                         LaporanScreen(navController)
                     }
                     composable("DataSetoranScreen") {
-                        DataSetoranScreen(navController)
+                        DataSetoranScreen(navController, setoranViewModel)
                     }
                     composable(
                         "AddAddressScreen?sampahIds={sampahIds}&totalKoin={totalKoin}",
@@ -70,6 +72,7 @@ class MainActivity : ComponentActivity() {
                         AddAddressScreen(
                             navController = navController,
                             sampahViewModel = sampahViewModel,
+                            setoranViewModel = setoranViewModel,
                             sampahIds = backStackEntry.arguments?.getString("sampahIds"),
                             totalKoin = backStackEntry.arguments?.getInt("totalKoin")
                         )

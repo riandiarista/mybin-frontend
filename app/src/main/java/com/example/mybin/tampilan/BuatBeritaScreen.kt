@@ -1,8 +1,6 @@
 package com.example.mybin.tampilan
 
 import android.annotation.SuppressLint
-import android.app.DatePickerDialog
-import android.app.TimePickerDialog
 import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -27,9 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.PhotoLibrary
@@ -71,7 +67,6 @@ import com.example.mybin.ui.theme.MyBinTheme
 import com.example.mybin.viewmodel.BeritaViewModel
 import java.io.File
 import java.text.SimpleDateFormat
-import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -81,8 +76,7 @@ fun BuatBeritaScreen(navController: NavController, viewModel: BeritaViewModel, b
     var deskripsi by remember { mutableStateOf("") }
     var lokasi by remember { mutableStateOf("") }
     var imageUri by remember { mutableStateOf<Uri?>(null) }
-    var tanggal by remember { mutableStateOf("") }
-    var waktu by remember { mutableStateOf("") }
+    // Removed tanggal and waktu state variables as they will be generated on submit
 
     LaunchedEffect(beritaId) {
         if (beritaId != null) {
@@ -94,11 +88,9 @@ fun BuatBeritaScreen(navController: NavController, viewModel: BeritaViewModel, b
                 if (berita.imageUri != null) {
                     imageUri = Uri.parse(berita.imageUri)
                 }
-                val dateParts = berita.date.split(", ")
-                if (dateParts.size == 2) {
-                    tanggal = dateParts[0]
-                    waktu = dateParts[1].replace(" WIB", "")
-                }
+                // Date handling removed from here since we want auto-generate on submit/update
+                // Or if you want to keep original date on edit, you might need to store it.
+                // But request was "generate automatically ... when submitted".
             }
         }
     }
@@ -128,13 +120,7 @@ fun BuatBeritaScreen(navController: NavController, viewModel: BeritaViewModel, b
             CustomTextField(label = "Deskripsi Detail", value = deskripsi, onValueChange = { deskripsi = it }, singleLine = false)
             Spacer(modifier = Modifier.height(16.dp))
 
-            DateTimeSection(
-                tanggal = tanggal,
-                waktu = waktu,
-                onTanggalChange = { tanggal = it },
-                onWaktuChange = { waktu = it }
-            )
-            Spacer(modifier = Modifier.height(24.dp))
+            // Removed DateTimeSection
 
             EducationSection(
                 selectedImageUri = imageUri,
@@ -149,10 +135,25 @@ fun BuatBeritaScreen(navController: NavController, viewModel: BeritaViewModel, b
                 onSubmit = {
                     if (judul.isNotBlank()) {
                         val imageString = imageUri?.toString()
+                        
+                        // Generate current date and time
+                        val currentDate = Date()
+                        val dateFormat = SimpleDateFormat("d MMMM yyyy", Locale("id", "ID"))
+                        val timeFormat = SimpleDateFormat("HH:mm", Locale("id", "ID"))
+                        
+                        val generatedTanggal = dateFormat.format(currentDate)
+                        val generatedWaktu = timeFormat.format(currentDate)
+
                         if (beritaId != null) {
-                            viewModel.updateBerita(beritaId, judul, deskripsi, lokasi, imageString, tanggal, waktu)
+                            // Even on update, we update the timestamp to now? 
+                            // Or keep original? The prompt says "menyesuaikan waktu dan tanggal berita di submit".
+                            // Usually "submit" implies the action of saving. 
+                            // Let's update it to current time on edit as well to reflect "last modified" or 
+                            // if the user wants it to look like a new submission.
+                            // Assuming "submit" action updates the time.
+                            viewModel.updateBerita(beritaId, judul, deskripsi, lokasi, imageString, generatedTanggal, generatedWaktu)
                         } else {
-                            viewModel.addBerita(judul, deskripsi, lokasi, imageString, tanggal, waktu)
+                            viewModel.addBerita(judul, deskripsi, lokasi, imageString, generatedTanggal, generatedWaktu)
                         }
                         navController.popBackStack()
                     }
@@ -212,68 +213,7 @@ private fun CustomTextField(label: String, value: String, onValueChange: (String
     }
 }
 
-@Composable
-private fun DateTimeSection(
-    tanggal: String,
-    waktu: String,
-    onTanggalChange: (String) -> Unit,
-    onWaktuChange: (String) -> Unit
-) {
-    val context = LocalContext.current
-    val calendar = Calendar.getInstance()
-    val year = calendar.get(Calendar.YEAR)
-    val month = calendar.get(Calendar.MONTH)
-    val day = calendar.get(Calendar.DAY_OF_MONTH)
-    val hour = calendar.get(Calendar.HOUR_OF_DAY)
-    val minute = calendar.get(Calendar.MINUTE)
-
-    val datePickerDialog = DatePickerDialog(
-        context,
-        { _, y, m, d ->
-            val selectedDate = Calendar.getInstance()
-            selectedDate.set(y, m, d)
-            val dateFormat = SimpleDateFormat("d MMMM yyyy", Locale("id", "ID"))
-            onTanggalChange(dateFormat.format(selectedDate.time))
-        },
-        year, month, day
-    )
-
-    val timePickerDialog = TimePickerDialog(
-        context,
-        { _, h, m -> onWaktuChange("$h:$m") },
-        hour, minute, true
-    )
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text("Tanggal Kegiatan", fontWeight = FontWeight.Medium, fontSize = 14.sp, modifier = Modifier.padding(bottom = 8.dp))
-            OutlinedButton(
-                onClick = { datePickerDialog.show() },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Icon(Icons.Default.DateRange, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(if (tanggal.isNotBlank()) tanggal else "Pilih Tanggal")
-            }
-        }
-        Column(modifier = Modifier.weight(1f)) {
-            Text("Waktu Kegiatan", fontWeight = FontWeight.Medium, fontSize = 14.sp, modifier = Modifier.padding(bottom = 8.dp))
-            OutlinedButton(
-                onClick = { timePickerDialog.show() },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Icon(Icons.Default.AccessTime, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(if (waktu.isNotBlank()) waktu else "Pilih Waktu")
-            }
-        }
-    }
-}
+// Removed DateTimeSection composable
 
 @Composable
 private fun EducationSection(
@@ -382,7 +322,6 @@ private fun LocationSection(location: String, onLocationChange: (String) -> Unit
             }
             Spacer(modifier = Modifier.height(8.dp))
             
-            // Mengganti Text statis menjadi CustomTextField untuk input manual
             OutlinedTextField(
                 value = location,
                 onValueChange = onLocationChange,

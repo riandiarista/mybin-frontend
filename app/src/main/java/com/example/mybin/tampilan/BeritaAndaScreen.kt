@@ -58,7 +58,7 @@ fun BeritaAndaScreen(navController: NavController, viewModel: BeritaViewModel) {
                 .padding(16.dp)
         ) {
             Text(
-                text = "Berita",
+                text = "Berita Saya",
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 16.dp)

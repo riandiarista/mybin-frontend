@@ -29,13 +29,18 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.mybin.model.SampahData
+import com.example.mybin.model.SetoranData
 import com.example.mybin.ui.theme.MyBinTheme
 import com.example.mybin.viewmodel.SampahViewModel
+import com.example.mybin.viewmodel.SetoranViewModel
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddAddressScreen(navController: NavController, sampahViewModel: SampahViewModel = viewModel(), sampahIds: String?, totalKoin: Int?) {
+fun AddAddressScreen(navController: NavController, sampahViewModel: SampahViewModel = viewModel(), setoranViewModel: SetoranViewModel? = null, sampahIds: String?, totalKoin: Int?) {
     var hariTanggal by remember { mutableStateOf("") }
     var jam by remember { mutableStateOf("") }
     var phoneNumber by remember { mutableStateOf("") }
@@ -125,7 +130,25 @@ fun AddAddressScreen(navController: NavController, sampahViewModel: SampahViewMo
             totalKoin?.let { EstimasiPointsCard(it) }
             Spacer(modifier = Modifier.height(24.dp))
             Button(
-                onClick = { /*TODO*/ },
+                onClick = {
+                    if (hariTanggal.isNotEmpty() && jam.isNotEmpty() && address.isNotEmpty() && selectedSampahList.isNotEmpty()) {
+                        val dateFormat = SimpleDateFormat("d/M/yyyy", Locale.getDefault())
+                        val date = dateFormat.parse(hariTanggal)
+                        val formattedDate = SimpleDateFormat("dd MMMM yyyy", Locale("id", "ID")).format(date ?: Date())
+                        val setoranData = SetoranData(
+                            id = "#" + System.currentTimeMillis().toString().takeLast(8),
+                            tanggal = "$formattedDate, $jam WIB",
+                            jenis = selectedSampahList.joinToString(", ") { "${it.totalBobot} ${it.jenisSampah}" },
+                            lokasi = address,
+                            status = "Diproses",
+                            totalKoin = totalKoin ?: 0
+                        )
+                        setoranViewModel?.addSetoran(setoranData)
+                        navController.navigate("DataSetoranScreen") {
+                            popUpTo("DataSetoranScreen") { inclusive = true }
+                        }
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -303,6 +326,6 @@ private fun EstimasiPointsCard(totalKoin: Int) {
 @Composable
 fun AddAddressScreenPreview() {
     MyBinTheme {
-        AddAddressScreen(rememberNavController(), viewModel(), null, 0)
+        AddAddressScreen(rememberNavController(), viewModel(), null, null, 0)
     }
 }

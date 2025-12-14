@@ -13,28 +13,24 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.example.mybin.model.SetoranData
 import com.example.mybin.ui.theme.MyBinTheme
-
-data class AdminSetoran(val id: String, val tanggal: String, val jenis: String, val lokasi: String, val status: String)
-
-val dummyAdminData = listOf(
-    AdminSetoran("#20251016", "16 Oktober 2025, 09:00 WIB", "5.0 kg Kertas & Kardus", "Bank Sampah Sentral, Jakarta", "Diproses"),
-    AdminSetoran("#20251015", "15 Oktober 2025, 14:30 WIB", "3.5 kg Sampah Campur (Plastik & Kertas)", "Jl. Mahoni No. 5, Padang", "Selesai"),
-    AdminSetoran("#20251017", "15 Oktober 2025, 14:30 WIB", "3.5 kg Sampah Campur (Plastik & Kertas)", "Jl. Mahoni No. 5, Padang", "Selesai"),
-)
+import com.example.mybin.viewmodel.SetoranViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DataSetoranScreen(navController: NavController) {
+fun DataSetoranScreen(navController: NavController, setoranViewModel: SetoranViewModel = viewModel()) {
+    val setoranList = setoranViewModel.setoranList
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -61,13 +57,13 @@ fun DataSetoranScreen(navController: NavController) {
                 .padding(horizontal = 16.dp)
         ) {
             item {
-                TambahDataButton(navController) // Pass NavController
+                TambahDataButton(navController)
                 Spacer(modifier = Modifier.height(16.dp))
                 DataStatusHeader()
                 Spacer(modifier = Modifier.height(8.dp))
             }
-            items(dummyAdminData) { setoran ->
-                AdminSetoranItem(setoran = setoran)
+            items(setoranList) { setoran ->
+                SetoranItem(setoran = setoran)
                 Spacer(modifier = Modifier.height(12.dp))
             }
         }
@@ -75,10 +71,10 @@ fun DataSetoranScreen(navController: NavController) {
 }
 
 @Composable
-fun TambahDataButton(navController: NavController) { // Accept NavController
+fun TambahDataButton(navController: NavController) {
     val gradient = Brush.horizontalGradient(listOf(Color(0xFF86F3B8), Color(0xFF53E690)))
     Button(
-        onClick = { navController.navigate("pilih_setoran_screen") }, // Navigate on click
+        onClick = { navController.navigate("pilih_setoran_screen") },
         modifier = Modifier
             .fillMaxWidth()
             .height(100.dp),
@@ -118,7 +114,7 @@ fun DataStatusHeader() {
 }
 
 @Composable
-fun AdminSetoranItem(setoran: AdminSetoran) {
+fun SetoranItem(setoran: SetoranData) {
     val barColor = if (setoran.status == "Diproses") Color(0xFFF0AD4E) else Color(0xFF2EBD70)
     val chipColor = if (setoran.status == "Diproses") Color(0xFFFFFBE6) else Color(0xFFD7F5E6)
     val chipContentColor = if (setoran.status == "Diproses") Color(0xFFF0AD4E) else Color(0xFF2EBD70)
@@ -128,7 +124,7 @@ fun AdminSetoranItem(setoran: AdminSetoran) {
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
-        Row {
+        Row(modifier = Modifier.height(IntrinsicSize.Min)) {
             Box(modifier = Modifier.width(8.dp).fillMaxHeight().background(barColor, shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp)))
             Column(modifier = Modifier.padding(16.dp).weight(1f)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -147,6 +143,12 @@ fun AdminSetoranItem(setoran: AdminSetoran) {
                     Icon(Icons.Filled.LocationOn, contentDescription = "Lokasi", tint = Color.Gray, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(setoran.lokasi, fontSize = 14.sp, color = Color.Gray)
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.MonetizationOn, contentDescription = "Koin", tint = Color(0xFFFFC107), modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("${setoran.totalKoin} Poin", fontSize = 14.sp, color = Color(0xFF1B5E20), fontWeight = FontWeight.SemiBold)
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {

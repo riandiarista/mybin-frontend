@@ -31,6 +31,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,6 +48,9 @@ import coil.compose.rememberAsyncImagePainter
 import com.example.mybin.R
 import com.example.mybin.ui.theme.MyBinTheme
 import com.example.mybin.viewmodel.BeritaViewModel
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun NewsScreen(navController: NavController, viewModel: BeritaViewModel) {
@@ -134,36 +138,60 @@ private fun Body(navController: NavController, viewModel: BeritaViewModel) {
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             )
             Spacer(modifier = Modifier.height(16.dp))
-            Text(text = "Trending", fontWeight = FontWeight.Bold, fontSize = 20.sp)
-            Spacer(modifier = Modifier.height(8.dp))
-            NewsItem(
-                imageRes = R.drawable.introawal,
-                title = "Sampah plastik: Reduce dan Reuse dahulu sebelum Recycle",
-                source = "Greenpeace",
-                date = "22 Juli 2022",
-                onClick = { navController.navigate("news_detail_screen") }
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            NewsItem(
-                imageRes = R.drawable.introawal,
-                title = "Menjaga Hutan untuk Masa Depan yang Lebih Baik",
-                source = "WWF Indonesia",
-                date = "15 Juli 2022",
-                onClick = { navController.navigate("news_detail_screen") }
-            )
-            
-            Spacer(modifier = Modifier.height(24.dp))
+
             Text(text = "Berita Terbaru", fontWeight = FontWeight.Bold, fontSize = 20.sp)
             Spacer(modifier = Modifier.height(8.dp))
             
-            viewModel.beritaList.forEach { berita ->
+            val beritaList = viewModel.beritaList
+            
+            data class DisplayItem(
+                val title: String,
+                val source: String,
+                val date: String,
+                val imageRes: Int? = null,
+                val imageUri: String? = null,
+                val onClick: () -> Unit
+            )
+
+            val combinedList = remember(beritaList.toList()) {
+                val hardcodedItems = listOf(
+                    DisplayItem(
+                        title = "Sampah plastik: Reduce dan Reuse dahulu sebelum Recycle",
+                        source = "Greenpeace",
+                        date = "22 Juli 2022",
+                        imageRes = R.drawable.introawal,
+                        onClick = { navController.navigate("news_detail_screen") }
+                    ),
+                    DisplayItem(
+                        title = "Menjaga Hutan untuk Masa Depan yang Lebih Baik",
+                        source = "WWF Indonesia",
+                        date = "15 Juli 2022",
+                        imageRes = R.drawable.introawal,
+                        onClick = { navController.navigate("news_detail_screen") }
+                    )
+                )
+
+                val dynamicItems = beritaList.map { berita ->
+                    DisplayItem(
+                        title = berita.title,
+                        source = if (berita.location.isNotEmpty()) berita.location else "User",
+                        date = berita.date,
+                        imageUri = berita.imageUri,
+                        onClick = { navController.navigate("news_detail_screen?beritaId=${berita.id}") }
+                    )
+                }
+
+                (hardcodedItems + dynamicItems).sortedByDescending { parseDate(it.date) }
+            }
+
+            combinedList.forEach { item ->
                 NewsItem(
-                    imageRes = R.drawable.introawal,
-                    title = berita.title,
-                    source = if (berita.location.isNotEmpty()) berita.location else "User",
-                    date = berita.date,
-                    imageUri = berita.imageUri,
-                    onClick = { navController.navigate("news_detail_screen?beritaId=${berita.id}") }
+                    imageRes = item.imageRes ?: R.drawable.introawal,
+                    title = item.title,
+                    source = item.source,
+                    date = item.date,
+                    imageUri = item.imageUri,
+                    onClick = item.onClick
                 )
                 Spacer(modifier = Modifier.height(16.dp))
             }
@@ -182,6 +210,26 @@ private fun Body(navController: NavController, viewModel: BeritaViewModel) {
             Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color.White)
         }
     }
+}
+
+private fun parseDate(dateStr: String): Date {
+    val locale = Locale("id", "ID")
+    val patterns = listOf(
+        "d MMMM yyyy, HH:mm 'WIB'",
+        "d MMMM yyyy, HH:mm",
+        "d MMMM yyyy"
+    )
+    
+    for (pattern in patterns) {
+        try {
+            val sdf = SimpleDateFormat(pattern, locale)
+            val date = sdf.parse(dateStr)
+            if (date != null) return date
+        } catch (e: Exception) {
+            // continue
+        }
+    }
+    return Date(0) // Default if parse fails
 }
 
 @Composable
