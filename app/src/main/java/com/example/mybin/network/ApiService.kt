@@ -6,7 +6,10 @@ import retrofit2.Call
 import retrofit2.http.Body
 import retrofit2.http.POST
 import retrofit2.http.Header
-import retrofit2.http.GET // <--- DITAMBAHKAN
+import retrofit2.http.GET
+import retrofit2.http.PUT
+import retrofit2.http.Path
+import retrofit2.http.DELETE // DITAMBAHKAN
 
 // Model data yang dikembalikan Backend (sesuai kolom database 'sampahs')
 data class Sampah(
@@ -39,10 +42,25 @@ interface ApiService {
         @Body request: SampahRequest
     ): Call<SampahResponse>
 
-    // Endpoint baru untuk Ambil Daftar Sampah (GET /api/sampah)
+    // Endpoint untuk Ambil Daftar Sampah (GET /api/sampah)
     @GET("api/sampah")
     fun getSampah(
         // Rute ini terproteksi oleh auth middleware
         @Header("Authorization") token: String
     ): Call<ListSampahResponse>
+
+    // Endpoint untuk Update Data Sampah (PUT /api/sampah/:id)
+    @PUT("api/sampah/{id}")
+    fun updateSampah(
+        @Path("id") id: String, // Mengambil ID dari URL Path
+        @Header("Authorization") token: String,
+        @Body request: SampahRequest // Body berisi data baru
+    ): Call<SampahResponse>
+
+    // Endpoint baru untuk Hapus Data Sampah (DELETE /api/sampah/:id)
+    @DELETE("api/sampah/{id}")
+    fun deleteSampah(
+        @Path("id") id: String, // Mengambil ID dari URL Path
+        @Header("Authorization") token: String
+    ): Call<SampahResponse> // Digunakan untuk mendapatkan pesan berhasil/gagal
 }

@@ -34,6 +34,7 @@ import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.mybin.R
 import com.example.mybin.viewmodel.SampahViewModel
+import kotlinx.coroutines.launch // DITAMBAHKAN
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -42,9 +43,17 @@ import java.util.*
 fun EditSampahScreen(navController: NavController, sampahId: String, sampahViewModel: SampahViewModel = viewModel()) {
     val sampah = sampahViewModel.getSampahById(sampahId)
 
+    // DITAMBAHKAN UNTUK MENAMPILKAN PESAN SNACKBAR
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
     if (sampah != null) {
         var detailSampah by remember { mutableStateOf(sampah.detailSampah) }
-        var totalBobot by remember { mutableStateOf(sampah.totalBobot.removeSuffix(" Kg")) }
+
+        // UBAH: Gunakan dua state untuk Total Bobot (Teks untuk input, Float untuk API)
+        var totalBobotText by remember { mutableStateOf(sampah.totalBobot.removeSuffix(" Kg")) }
+        var totalBobotFloat by remember { mutableStateOf(sampah.totalBobot.removeSuffix(" Kg").toFloatOrNull() ?: 0f) }
+
         var imageUri by remember { mutableStateOf(sampah.imageUri) }
         var tempImageUri by remember { mutableStateOf<Uri?>(null) }
         val context = LocalContext.current
@@ -70,9 +79,10 @@ fun EditSampahScreen(navController: NavController, sampahId: String, sampahViewM
             val storageDir = context.cacheDir
             return File.createTempFile("JPEG_${timeStamp}_", ".jpg", storageDir)
         }
-        
+
         fun calculateKoin() {
-            val bobot = totalBobot.toFloatOrNull() ?: 0f
+            // UBAH: Gunakan totalBobotFloat untuk perhitungan
+            val bobot = totalBobotFloat
             val koinPerKg = when (sampah.jenisSampah) {
                 "Organik" -> 1000
                 "Anorganik" -> 2000
@@ -88,6 +98,14 @@ fun EditSampahScreen(navController: NavController, sampahId: String, sampahViewM
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
+            )
+
+            // DITAMBAHKAN: SnackbarHost
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 80.dp)
             )
 
             Card(
@@ -153,9 +171,11 @@ fun EditSampahScreen(navController: NavController, sampahId: String, sampahViewM
 
                     Text("Total Bobot (kg)", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     OutlinedTextField(
-                        value = totalBobot,
-                        onValueChange = { 
-                            totalBobot = it
+                        value = totalBobotText, // UBAH: Gunakan totalBobotText untuk input
+                        onValueChange = {
+                            totalBobotText = it
+                            // Update state float juga untuk perhitungan dan API
+                            totalBobotFloat = it.toFloatOrNull() ?: 0f
                             calculateKoin()
                         },
                         modifier = Modifier.fillMaxWidth(),
@@ -214,14 +234,27 @@ fun EditSampahScreen(navController: NavController, sampahId: String, sampahViewM
 
                     Button(
                         onClick = {
-                            val updatedSampah = sampah.copy(
-                                detailSampah = detailSampah,
-                                totalBobot = "$totalBobot Kg",
-                                imageUri = imageUri,
-                                estimasiKoin = estimasiKoin
+                            // LOGIKA BARU: PANGGIL updateSampahInApi
+                            sampahViewModel.updateSampahInApi(
+                                id = sampah.id,
+                                jenis = sampah.jenisSampah, // Jenis tidak diubah di screen ini
+                                berat = totalBobotFloat,
+                                detail = detailSampah,
+                                coin = estimasiKoin,
+                                onSuccess = { message ->
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar(message)
+                                    }
+                                    // Kembali ke halaman sebelumnya setelah berhasil
+                                    navController.popBackStack()
+                                },
+                                onError = { message ->
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar(message)
+                                    }
+                                }
                             )
-                            sampahViewModel.updateSampah(updatedSampah)
-                            navController.popBackStack()
+
                         },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),

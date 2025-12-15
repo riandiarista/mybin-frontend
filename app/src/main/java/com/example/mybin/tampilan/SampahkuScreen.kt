@@ -1,6 +1,6 @@
 package com.example.mybin.tampilan
 
-import android.widget.Toast // DITAMBAHKAN
+import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
@@ -29,7 +29,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator // DITAMBAHKAN
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -44,7 +44,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect // DITAMBAHKAN
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,7 +55,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext // DITAMBAHKAN
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -165,10 +165,12 @@ fun SampahkuScreen(navController: NavController, sampahViewModel: SampahViewMode
                         confirmValueChange = { dismissValue ->
                             when(dismissValue) {
                                 SwipeToDismissBoxValue.StartToEnd -> {
+                                    // Panggil Edit Screen saat swipe ke kanan
                                     navController.navigate("edit_sampah_screen/${item.id}")
                                     false
                                 }
                                 SwipeToDismissBoxValue.EndToStart -> {
+                                    // Tampilkan dialog hapus saat swipe ke kiri
                                     itemToDelete = item
                                     showDeleteDialog = true
                                     false
@@ -192,9 +194,27 @@ fun SampahkuScreen(navController: NavController, sampahViewModel: SampahViewMode
     if (showDeleteDialog) {
         DeleteConfirmationDialog(
             onConfirm = {
+                // LOGIC BARU: PANGGIL deleteSampahInApi
                 itemToDelete?.let { item ->
-                    sampahViewModel.deleteSampah(item.id)
+                    val idToDelete = item.id
+
+                    if (idToDelete.isNotEmpty()) {
+                        sampahViewModel.deleteSampahInApi(
+                            id = idToDelete,
+                            onSuccess = { message ->
+                                // Beri feedback Toast setelah API sukses
+                                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                            },
+                            onError = { message ->
+                                // Beri feedback Toast jika terjadi error
+                                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                            }
+                        )
+                    } else {
+                        Toast.makeText(context, "Error: ID sampah tidak valid.", Toast.LENGTH_LONG).show()
+                    }
                 }
+                // Tutup dialog
                 showDeleteDialog = false
                 itemToDelete = null
             },
@@ -206,7 +226,7 @@ fun SampahkuScreen(navController: NavController, sampahViewModel: SampahViewMode
     }
 }
 
-// ... (Kode SwipeBackground, SampahItemCard, DeleteConfirmationDialog, dan Preview tetap sama)
+// ... (Komponen SwipeBackground, SampahItemCard, DeleteConfirmationDialog, dan Preview tetap sama)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
