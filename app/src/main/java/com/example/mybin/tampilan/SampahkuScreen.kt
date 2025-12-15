@@ -1,5 +1,6 @@
 package com.example.mybin.tampilan
 
+import android.widget.Toast // DITAMBAHKAN
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
@@ -28,6 +29,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator // DITAMBAHKAN
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -42,6 +44,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect // DITAMBAHKAN
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,6 +55,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext // DITAMBAHKAN
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -72,8 +76,22 @@ import com.example.mybin.viewmodel.SampahViewModel
 @Composable
 fun SampahkuScreen(navController: NavController, sampahViewModel: SampahViewModel = viewModel()) {
     val sampleData = sampahViewModel.sampahList
+    val context = LocalContext.current // Mendapatkan konteks untuk Toast
+
     var showDeleteDialog by remember { mutableStateOf(false) }
     var itemToDelete by remember { mutableStateOf<SampahData?>(null) }
+
+    // FIX 1: Panggil loadSampah saat Composable pertama kali masuk ke komposisi
+    LaunchedEffect(Unit) {
+        sampahViewModel.loadSampah(
+            onSuccess = { message ->
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            },
+            onError = { message ->
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -108,37 +126,64 @@ fun SampahkuScreen(navController: NavController, sampahViewModel: SampahViewMode
             }
         }
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(Color(0xFFF5F5F5))
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) { 
-            items(sampleData, key = { it.id }) { item ->
-                val dismissState = rememberSwipeToDismissBoxState(
-                    confirmValueChange = { dismissValue ->
-                        when(dismissValue) {
-                            SwipeToDismissBoxValue.StartToEnd -> {
-                                navController.navigate("edit_sampah_screen/${item.id}")
-                                false
-                            }
-                            SwipeToDismissBoxValue.EndToStart -> {
-                                itemToDelete = item
-                                showDeleteDialog = true
-                                false
-                            }
-                            else -> false
-                        }
-                    },
-                    positionalThreshold = { it * 0.25f }
+        // FIX 2: Tampilkan loading indicator jika sedang memuat data
+        if (sampahViewModel.isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = Color(0xFF4CAF50))
+            }
+        } else if (sampleData.isEmpty()) {
+            // Tampilkan pesan jika data kosong setelah loading selesai
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Anda belum memiliki data sampah.",
+                    color = Color.Gray,
+                    fontSize = 18.sp
                 )
-                SwipeToDismissBox(
-                    state = dismissState,
-                    backgroundContent = { SwipeBackground(dismissState) }
-                ) {
-                    SampahItemCard(item)
+            }
+        } else {
+            // Tampilkan daftar jika data sudah dimuat
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .background(Color(0xFFF5F5F5))
+                    .padding(horizontal = 16.dp), // Hanya padding horizontal
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                items(sampleData, key = { it.id }) { item ->
+                    val dismissState = rememberSwipeToDismissBoxState(
+                        confirmValueChange = { dismissValue ->
+                            when(dismissValue) {
+                                SwipeToDismissBoxValue.StartToEnd -> {
+                                    navController.navigate("edit_sampah_screen/${item.id}")
+                                    false
+                                }
+                                SwipeToDismissBoxValue.EndToStart -> {
+                                    itemToDelete = item
+                                    showDeleteDialog = true
+                                    false
+                                }
+                                else -> false
+                            }
+                        },
+                        positionalThreshold = { it * 0.25f }
+                    )
+                    SwipeToDismissBox(
+                        state = dismissState,
+                        backgroundContent = { SwipeBackground(dismissState) }
+                    ) {
+                        SampahItemCard(item)
+                    }
                 }
             }
         }
@@ -160,6 +205,8 @@ fun SampahkuScreen(navController: NavController, sampahViewModel: SampahViewMode
         )
     }
 }
+
+// ... (Kode SwipeBackground, SampahItemCard, DeleteConfirmationDialog, dan Preview tetap sama)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -213,7 +260,7 @@ fun SampahItemCard(item: SampahData, modifier: Modifier = Modifier) {
         "B3" -> Color.Red
         else -> Color.Gray
     }
-    
+
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),

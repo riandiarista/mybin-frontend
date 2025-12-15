@@ -29,6 +29,7 @@ import com.example.mybin.R
 import com.example.mybin.network.ApiClient
 import com.example.mybin.network.LoginRequest
 import com.example.mybin.network.LoginResponse
+import com.example.mybin.network.AuthTokenManager // <-- IMPORT BARU DITAMBAHKAN
 import com.example.mybin.ui.theme.MyBinTheme
 import retrofit2.Call
 import retrofit2.Callback
@@ -157,6 +158,13 @@ fun LoginScreen(navController: NavController) {
                         if (response.isSuccessful) {
                             val responseBody = response.body()
                             val token = responseBody?.token
+
+                            // === KODE PERBAIKAN DITAMBAHKAN DI SINI ===
+                            if (token != null) {
+                                AuthTokenManager.authToken = token // <-- SIMPAN TOKEN
+                            }
+                            // ==========================================
+
                             val message = responseBody?.message ?: "Login Berhasil"
                             Toast.makeText(context, "$message\nToken: $token", Toast.LENGTH_LONG).show()
                             navController.navigate("MainPage")
