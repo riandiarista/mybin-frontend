@@ -33,7 +33,7 @@ private val MenuContainerColor = Color.White
 private val WelcomeCardColor = Color.White
 
 @Composable
-fun HomeAdmin(navController: NavController) { // NAMA DISESUAIKAN DENGAN MainActivity
+fun HomeAdmin(navController: NavController) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -72,7 +72,7 @@ fun HomeAdmin(navController: NavController) { // NAMA DISESUAIKAN DENGAN MainAct
                     )
                     Spacer(modifier = Modifier.width(16.dp))
                     Text(
-                        text = "Selamat Datang, Superbin!", // Nama disesuaikan role baru
+                        text = "Selamat Datang, Superbin!",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = PrimaryGreen
@@ -104,22 +104,26 @@ fun HomeAdmin(navController: NavController) { // NAMA DISESUAIKAN DENGAN MainAct
                     fontWeight = FontWeight.Bold,
                     color = PrimaryGreen
                 )
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(45.dp))
 
-                // Navigasi ke Verifikasi Sampah
+                // Tombol Verifikasi Sampah
                 MenuButton(
                     text = "Verifikasi\nSampah",
                     imageId = R.drawable.plastic_bottle_icon,
-                    onClick = { navController.navigate("VerifikasiSampahScreen") }
+                    onClick = {
+                        navController.navigate("VerifikasiSampahScreen")
+                    }
                 )
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(35.dp))
 
-                // Navigasi ke Admin News (Berita Terkini)
+                // Tombol Berita Terkini
                 MenuButton(
                     text = "Berita\nTerkini",
                     imageId = R.drawable.waving_trash_can_icon,
-                    onClick = { navController.navigate("AdminNewsScreen") }
+                    onClick = {
+                        navController.navigate("NewsScreen")
+                    }
                 )
             }
         }

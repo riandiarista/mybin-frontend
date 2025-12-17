@@ -31,6 +31,7 @@ import com.example.mybin.tampilan.ProfileScreen
 import com.example.mybin.tampilan.RecycleScreen
 import com.example.mybin.tampilan.SampahkuScreen
 import com.example.mybin.tampilan.HomeAdmin
+import com.example.mybin.tampilan.VerifikasiSampahScreen // <-- IMPORT BARU
 import com.example.mybin.ui.theme.MyBinTheme
 import com.example.mybin.viewmodel.BeritaViewModel
 import com.example.mybin.viewmodel.SampahViewModel
@@ -55,9 +56,13 @@ class MainActivity : ComponentActivity() {
                         LoginScreen(navController)
                     }
 
-                    // --- ROUTE UNTUK ROLE SUPERBIN ---
+                    // --- ROUTE ADMIN ---
                     composable("HomeAdmin") {
                         HomeAdmin(navController)
+                    }
+
+                    composable("VerifikasiSampahScreen") { // <-- ROUTE BARU
+                        VerifikasiSampahScreen(navController)
                     }
 
                     composable("MainPage") {
