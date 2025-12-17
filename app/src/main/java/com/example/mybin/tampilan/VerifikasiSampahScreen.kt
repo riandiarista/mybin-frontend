@@ -1,4 +1,3 @@
-
 package com.example.mybin.tampilan
 
 import androidx.compose.foundation.BorderStroke
@@ -40,11 +39,6 @@ fun VerifikasiSampahScreen(navController: NavController, setoranViewModel: Setor
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
                     }
                 },
-                actions = {
-                    IconButton(onClick = { /*TODO*/ }) {
-                        Icon(Icons.Default.Download, contentDescription = "Unduh")
-                    }
-                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFF5F5F5))
             )
         },
@@ -58,16 +52,83 @@ fun VerifikasiSampahScreen(navController: NavController, setoranViewModel: Setor
         ) {
             item {
                 Spacer(modifier = Modifier.height(16.dp))
-                DataStatusHeader()
-                Spacer(modifier = Modifier.height(8.dp))
             }
             items(setoranList) { setoran ->
-                SetoranItem(setoran = setoran)
+                VerifikasiSetoranItem(setoran = setoran)
                 Spacer(modifier = Modifier.height(12.dp))
             }
         }
     }
 }
+
+@Composable
+fun VerifikasiSetoranItem(setoran: SetoranData) {
+    val barColor = if (setoran.status == "Diproses") Color(0xFFF0AD4E) else Color(0xFF2EBD70)
+    val chipColor = if (setoran.status == "Diproses") Color(0xFFFFFBE6) else Color(0xFFD7F5E6)
+    val chipContentColor = if (setoran.status == "Diproses") Color(0xFFF0AD4E) else Color(0xFF2EBD70)
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+            Box(modifier = Modifier.width(8.dp).fillMaxHeight().background(barColor, shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp)))
+            Column(modifier = Modifier.padding(16.dp).weight(1f)) {
+                Text("Setoran ${setoran.id}", fontWeight = FontWeight.Bold)
+                Text(setoran.tanggal, fontSize = 12.sp, color = Color.Gray)
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.Redeem, contentDescription = "Jenis Sampah", tint = Color.Gray, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(setoran.jenis, fontSize = 14.sp)
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.Person, contentDescription = "Nama", tint = Color.Gray, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Pengguna", fontSize = 14.sp, color = Color.Gray)
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.MonetizationOn, contentDescription = "Koin", tint = Color(0xFFFFC107), modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("${setoran.totalKoin} Poin", fontSize = 14.sp, color = Color(0xFF1B5E20), fontWeight = FontWeight.SemiBold)
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Card(shape = RoundedCornerShape(8.dp), colors = CardDefaults.cardColors(containerColor = chipColor)) {
+                        Text(setoran.status, color = chipContentColor, modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp), fontSize = 12.sp)
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedButton(
+                            onClick = { /* TODO: Handle Tolak */ },
+                            modifier = Modifier.height(36.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, Color.Red)
+                        ) {
+                            Text("Tolak", color = Color.Red, fontSize = 12.sp)
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = { /* TODO: Handle Verifikasi */ },
+                            modifier = Modifier.height(36.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2EBD70))
+                        ) {
+                            Text("Verifikasi", color = Color.White, fontSize = 12.sp)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 
 @Preview(showBackground = true)
 @Composable

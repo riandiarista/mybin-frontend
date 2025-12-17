@@ -4,7 +4,16 @@ import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,10 +21,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Eco
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material3.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -28,7 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.net.toUri // Penting untuk .toUri()
+import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
@@ -41,7 +52,10 @@ import java.util.Date
 import java.util.Locale
 
 @Composable
-fun NewsScreen(navController: NavController, viewModel: BeritaViewModel) {
+fun AdminNewsScreen(
+    navController: NavController,
+    viewModel: BeritaViewModel = viewModel() // Best practice: Inisialisasi default di sini
+) {
     Box(modifier = Modifier.fillMaxSize()) {
         Image(
             painter = painterResource(id = R.drawable.orang),
@@ -91,15 +105,9 @@ private fun Header() {
                     .clip(CircleShape)
             )
             Column(modifier = Modifier.padding(start = 16.dp)) {
-                Text(text = "Selamat Sore, Puan", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Text(text = "Jangan sampai ketinggalan daur ulang sampahmu ya!", fontSize = 12.sp)
+                Text(text = "Selamat Sore, Admin", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(text = "Selamat datang di halaman berita admin", fontSize = 12.sp)
             }
-            Spacer(modifier = Modifier.weight(1f))
-            Icon(
-                imageVector = Icons.Default.Notifications,
-                contentDescription = "Notification",
-                modifier = Modifier.size(24.dp)
-            )
         }
     }
 }
@@ -120,12 +128,12 @@ private fun Body(navController: NavController, viewModel: BeritaViewModel) {
         ) {
             Text(
                 text = "News",
-                fontSize = 32.sp,
+                fontSize = 25.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF4CAF50),
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
             Text(text = "Berita Terbaru", fontWeight = FontWeight.Bold, fontSize = 20.sp)
             Spacer(modifier = Modifier.height(8.dp))
@@ -162,7 +170,7 @@ private fun Body(navController: NavController, viewModel: BeritaViewModel) {
                 val dynamicItems = beritaList.map { berita ->
                     DisplayItem(
                         title = berita.title,
-                        source = berita.location.ifEmpty { "User" }, // Perbaikan ifEmpty
+                        source = berita.location.ifEmpty { "User" }, // Perbaikan: Menggunakan ifEmpty
                         date = berita.date,
                         imageUri = berita.imageUri,
                         onClick = { navController.navigate("news_detail_screen?beritaId=${berita.id}") }
@@ -186,22 +194,11 @@ private fun Body(navController: NavController, viewModel: BeritaViewModel) {
 
             Spacer(modifier = Modifier.height(80.dp))
         }
-
-        FloatingActionButton(
-            onClick = { navController.navigate("berita_anda_screen") },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp),
-            shape = CircleShape,
-            containerColor = Color(0xFF4CAF50)
-        ) {
-            Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color.White)
-        }
     }
 }
 
 private fun parseDate(dateStr: String): Date {
-    val locale = Locale("in", "ID") // Gunakan "in" untuk Indonesia (menghindari deprecated)
+    val locale = Locale.forLanguageTag("id-ID") // Perbaikan: Locale yang tidak deprecated
     val patterns = listOf(
         "d MMMM yyyy, HH:mm 'WIB'",
         "d MMMM yyyy, HH:mm",
@@ -213,7 +210,7 @@ private fun parseDate(dateStr: String): Date {
             val sdf = SimpleDateFormat(pattern, locale)
             val date = sdf.parse(dateStr)
             if (date != null) return date
-        } catch (_: Exception) { // "_" karena variabel 'e' tidak digunakan
+        } catch (e: Exception) {
             // continue
         }
     }
@@ -231,8 +228,8 @@ private fun NewsItem(imageRes: Int, title: String, source: String, date: String,
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
-            val painter = if (!imageUri.isNullOrEmpty()) {
-                rememberAsyncImagePainter(model = imageUri.toUri()) // Perbaikan String.toUri()
+            val painter = if (imageUri != null) {
+                rememberAsyncImagePainter(model = imageUri.toUri()) // Perbaikan: Menggunakan toUri()
             } else {
                 painterResource(id = imageRes)
             }
@@ -281,11 +278,10 @@ private fun NewsItem(imageRes: Int, title: String, source: String, date: String,
 
 @Preview(showBackground = true)
 @Composable
-fun NewsScreenPreview() {
+fun AdminNewsScreenPreview() {
     MyBinTheme {
-        // PERBAIKAN: Gunakan viewModel() dari lifecycle-viewmodel-compose
-        // agar tidak membuat instance ViewModel manual di dalam Composable
-        val mockViewModel: BeritaViewModel = viewModel()
-        NewsScreen(rememberNavController(), mockViewModel)
+        // Perbaikan Utama: Menggunakan viewModel() alih-alih constructor langsung
+        val viewModel: BeritaViewModel = viewModel()
+        AdminNewsScreen(rememberNavController(), viewModel)
     }
 }
