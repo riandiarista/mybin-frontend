@@ -29,7 +29,7 @@ import com.example.mybin.R
 import com.example.mybin.network.ApiClient
 import com.example.mybin.network.LoginRequest
 import com.example.mybin.network.LoginResponse
-import com.example.mybin.network.AuthTokenManager // <-- IMPORT BARU DITAMBAHKAN
+import com.example.mybin.network.AuthTokenManager
 import com.example.mybin.ui.theme.MyBinTheme
 import retrofit2.Call
 import retrofit2.Callback
@@ -86,7 +86,8 @@ fun LoginScreen(navController: NavController) {
             onValueChange = { username = it },
             modifier = Modifier.fillMaxWidth(),
             label = { Text("Username") },
-            shape = RoundedCornerShape(12.dp)
+            shape = RoundedCornerShape(12.dp),
+            singleLine = true
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -98,16 +99,13 @@ fun LoginScreen(navController: NavController) {
             label = { Text("Password") },
             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             trailingIcon = {
-                val image = if (passwordVisible)
-                    Icons.Filled.VisibilityOff
-                else
-                    Icons.Filled.Visibility
-
+                val image = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
                     Icon(imageVector = image, contentDescription = "Toggle password visibility")
                 }
             },
-            shape = RoundedCornerShape(12.dp)
+            shape = RoundedCornerShape(12.dp),
+            singleLine = true
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -119,10 +117,7 @@ fun LoginScreen(navController: NavController) {
             Checkbox(
                 checked = privacyPolicyChecked,
                 onCheckedChange = { privacyPolicyChecked = it },
-                colors = CheckboxDefaults.colors(
-                    checkedColor = greenColor,
-                    uncheckedColor = Color.Gray
-                )
+                colors = CheckboxDefaults.colors(checkedColor = greenColor)
             )
             Text(text = "I have read the privacy policy.")
         }
@@ -131,14 +126,15 @@ fun LoginScreen(navController: NavController) {
             Text(
                 text = it,
                 color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(top = 8.dp)
+                modifier = Modifier.padding(vertical = 8.dp)
             )
         }
 
         if (isLoading) {
-            CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = greenColor)
+            }
         }
-
 
         Spacer(modifier = Modifier.weight(1f))
 
@@ -152,6 +148,7 @@ fun LoginScreen(navController: NavController) {
                 isLoading = true
                 loginError = null
                 val loginRequest = LoginRequest(username, password)
+
                 ApiClient.instance.login(loginRequest).enqueue(object : Callback<LoginResponse> {
                     override fun onResponse(call: Call<LoginResponse>, response: Response<LoginResponse>) {
                         isLoading = false
@@ -159,51 +156,39 @@ fun LoginScreen(navController: NavController) {
                             val responseBody = response.body()
                             val token = responseBody?.token
 
-                            // === KODE PERBAIKAN DITAMBAHKAN DI SINI ===
                             if (token != null) {
-                                AuthTokenManager.authToken = token // <-- SIMPAN TOKEN
+                                AuthTokenManager.authToken = token
                             }
-                            // ==========================================
 
-                            val message = responseBody?.message ?: "Login Berhasil"
-                            Toast.makeText(context, "$message\nToken: $token", Toast.LENGTH_LONG).show()
-                            navController.navigate("MainPage")
+                            Toast.makeText(context, "Login Berhasil", Toast.LENGTH_SHORT).show()
+
+                            // LOGIKA NAVIGASI ROLE BERDASARKAN USERNAME
+                            if (username.trim().lowercase() == "superbin") {
+                                navController.navigate("HomeAdmin") {
+                                    popUpTo("LoginScreen") { inclusive = true }
+                                }
+                            } else {
+                                navController.navigate("MainPage") {
+                                    popUpTo("LoginScreen") { inclusive = true }
+                                }
+                            }
                         } else {
-                            loginError = "Login Gagal: ${response.message()}"
+                            loginError = "Login Gagal: Username atau Password salah"
                         }
                     }
 
                     override fun onFailure(call: Call<LoginResponse>, t: Throwable) {
                         isLoading = false
-                        loginError = if (t is IOException) {
-                            "Login Gagal: Hubungkan ke internet!"
-                        } else {
-                            "Login Gagal: ${t.message}"
-                        }
+                        loginError = if (t is IOException) "Koneksi gagal, cek internet Anda" else t.message
                     }
                 })
             },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
+            modifier = Modifier.fillMaxWidth().height(56.dp),
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(containerColor = greenColor),
             enabled = !isLoading
         ) {
-            Text(
-                text = "Login",
-                color = Color.White,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Text(text = "Login", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun LoginScreenPreview() {
-    MyBinTheme {
-        LoginScreen(rememberNavController())
     }
 }

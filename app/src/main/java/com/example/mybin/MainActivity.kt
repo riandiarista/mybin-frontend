@@ -30,6 +30,7 @@ import com.example.mybin.tampilan.PilihSetoranScreen
 import com.example.mybin.tampilan.ProfileScreen
 import com.example.mybin.tampilan.RecycleScreen
 import com.example.mybin.tampilan.SampahkuScreen
+import com.example.mybin.tampilan.HomeAdmin
 import com.example.mybin.ui.theme.MyBinTheme
 import com.example.mybin.viewmodel.BeritaViewModel
 import com.example.mybin.viewmodel.SampahViewModel
@@ -53,6 +54,12 @@ class MainActivity : ComponentActivity() {
                     composable("LoginScreen") {
                         LoginScreen(navController)
                     }
+
+                    // --- ROUTE UNTUK ROLE SUPERBIN ---
+                    composable("HomeAdmin") {
+                        HomeAdmin(navController)
+                    }
+
                     composable("MainPage") {
                         MainPage(navController)
                     }
@@ -104,7 +111,7 @@ class MainActivity : ComponentActivity() {
                         val beritaId = backStackEntry.arguments?.getString("beritaId")
                         BuatBeritaScreen(navController, beritaViewModel, beritaId)
                     }
-                     composable("notifikasi_screen") {
+                    composable("notifikasi_screen") {
                         NotifikasiScreen(navController)
                     }
                     composable("profile_screen") {

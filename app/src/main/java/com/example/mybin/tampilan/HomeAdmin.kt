@@ -1,4 +1,3 @@
-
 package com.example.mybin.tampilan
 
 import androidx.compose.foundation.Image
@@ -22,6 +21,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.example.mybin.R
 
 // Color Palette
@@ -32,11 +33,11 @@ private val MenuContainerColor = Color.White
 private val WelcomeCardColor = Color.White
 
 @Composable
-fun HomeAdminScreen() {
+fun HomeAdmin(navController: NavController) { // NAMA DISESUAIKAN DENGAN MainActivity
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(ScreenBackgroundColor) // Light grey background
+            .background(ScreenBackgroundColor)
     ) {
         // Top Section: Background Image and Welcome Card
         Box(
@@ -71,7 +72,7 @@ fun HomeAdminScreen() {
                     )
                     Spacer(modifier = Modifier.width(16.dp))
                     Text(
-                        text = "Selamat Datang, Min!",
+                        text = "Selamat Datang, Superbin!", // Nama disesuaikan role baru
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = PrimaryGreen
@@ -84,11 +85,11 @@ fun HomeAdminScreen() {
         Box(
             contentAlignment = Alignment.TopCenter,
             modifier = Modifier
-                .padding(top = 320.dp) // Overlap to hide the gap
+                .padding(top = 320.dp)
                 .fillMaxSize()
                 .background(
-                    color = MenuContainerColor, // White background for the curved area
-                    shape = RoundedCornerShape(topStart = 40.dp, topEnd =40.dp)
+                    color = MenuContainerColor,
+                    shape = RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp)
                 )
         ) {
             Column(
@@ -98,22 +99,27 @@ fun HomeAdminScreen() {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Menu",
+                    text = "Menu Admin",
                     fontSize = 26.sp,
                     fontWeight = FontWeight.Bold,
                     color = PrimaryGreen
                 )
                 Spacer(modifier = Modifier.height(24.dp))
+
+                // Navigasi ke Verifikasi Sampah
                 MenuButton(
                     text = "Verifikasi\nSampah",
                     imageId = R.drawable.plastic_bottle_icon,
-                    onClick = { /*TODO*/ }
+                    onClick = { navController.navigate("VerifikasiSampahScreen") }
                 )
+
                 Spacer(modifier = Modifier.height(20.dp))
+
+                // Navigasi ke Admin News (Berita Terkini)
                 MenuButton(
                     text = "Berita\nTerkini",
                     imageId = R.drawable.waving_trash_can_icon,
-                    onClick = { /*TODO*/ }
+                    onClick = { navController.navigate("AdminNewsScreen") }
                 )
             }
         }
@@ -125,14 +131,12 @@ fun MenuButton(text: String, imageId: Int, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(160.dp) // Increased height
-            .padding(horizontal = 45.dp) // Increased horizontal padding
+            .height(160.dp)
+            .padding(horizontal = 45.dp)
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = LightGreen
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp) // Softer shadow
+        colors = CardDefaults.cardColors(containerColor = LightGreen),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier
@@ -160,6 +164,6 @@ fun MenuButton(text: String, imageId: Int, onClick: () -> Unit) {
 
 @Preview(showBackground = true, device = "id:pixel_5")
 @Composable
-fun HomeAdminScreenPreview() {
-    HomeAdminScreen()
+fun HomeAdminPreview() {
+    HomeAdmin(rememberNavController())
 }
