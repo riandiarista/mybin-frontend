@@ -28,7 +28,6 @@ data class ListSampahResponse(
 )
 
 // --- MODEL DATA EDUKASI (BERITA) ---
-// Sesuaikan dengan model edukasi.js Anda
 data class EdukasiRequest(
     val judul: String,
     val deskripsi: String,
@@ -61,11 +60,23 @@ data class ListEdukasiResponse(
 data class LoginRequest(val username: String, val password: String)
 data class LoginResponse(val message: String, val token: String?)
 
+// --- MODEL FCM (BARU) ---
+data class FCMRequest(
+    val fcm_token: String
+)
+
 interface ApiService {
 
-    // --- AUTH ---
+    // --- AUTH & NOTIFIKASI ---
     @POST("api/login")
     fun login(@Body request: LoginRequest): Call<LoginResponse>
+
+    // Endpoint Baru untuk Update FCM Token
+    @POST("api/auth/update-fcm")
+    fun updateFCMToken(
+        @Header("Authorization") token: String,
+        @Body request: FCMRequest
+    ): Call<Void>
 
     // --- MODUL SAMPAH ---
     @POST("api/sampah")
@@ -93,14 +104,12 @@ interface ApiService {
     ): Call<SampahResponse>
 
     // --- MODUL EDUKASI (BERITA) ---
-    // Endpoint untuk Submit Berita Baru dari BuatBeritaScreen
     @POST("api/edukasi")
     fun createEdukasi(
         @Header("Authorization") token: String,
         @Body request: EdukasiRequest
     ): Call<EdukasiResponse>
 
-    // Endpoint untuk Mengambil Daftar Berita di NewsScreen
     @GET("api/edukasi")
     fun getEdukasi(
         @Header("Authorization") token: String

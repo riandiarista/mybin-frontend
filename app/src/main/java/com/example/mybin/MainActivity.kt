@@ -1,9 +1,15 @@
 package com.example.mybin
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -31,16 +37,34 @@ import com.example.mybin.tampilan.ProfileScreen
 import com.example.mybin.tampilan.RecycleScreen
 import com.example.mybin.tampilan.SampahkuScreen
 import com.example.mybin.tampilan.HomeAdmin
-import com.example.mybin.tampilan.VerifikasiSampahScreen // <-- IMPORT BARU
+import com.example.mybin.tampilan.VerifikasiSampahScreen
 import com.example.mybin.ui.theme.MyBinTheme
 import com.example.mybin.viewmodel.BeritaViewModel
 import com.example.mybin.viewmodel.SampahViewModel
 import com.example.mybin.viewmodel.SetoranViewModel
 
 class MainActivity : ComponentActivity() {
+
+    // Registrasi request permission handler
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            // Izin diberikan
+            Toast.makeText(this, "Notifikasi aktif", Toast.LENGTH_SHORT).show()
+        } else {
+            // Izin ditolak
+            Toast.makeText(this, "Notifikasi tidak akan muncul", Toast.LENGTH_LONG).show()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Panggil fungsi cek izin saat aplikasi dibuka
+        askNotificationPermission()
+
         setContent {
             MyBinTheme {
                 val navController = rememberNavController()
@@ -61,7 +85,7 @@ class MainActivity : ComponentActivity() {
                         HomeAdmin(navController)
                     }
 
-                    composable("VerifikasiSampahScreen") { // <-- ROUTE BARU
+                    composable("VerifikasiSampahScreen") {
                         VerifikasiSampahScreen(navController)
                     }
 
@@ -167,6 +191,18 @@ class MainActivity : ComponentActivity() {
                         ExchangeScreen(navController)
                     }
                 }
+            }
+        }
+    }
+
+    private fun askNotificationPermission() {
+        // Izin ini hanya diperlukan untuk Android 13 (Tiramisu / API 33) ke atas
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
+                PackageManager.PERMISSION_GRANTED
+            ) {
+                // Minta izin secara langsung
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
     }
