@@ -49,8 +49,9 @@ import com.example.mybin.viewmodel.BeritaViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewsDetailScreen(navController: NavController, viewModel: BeritaViewModel? = null, beritaId: String? = null) {
+    // State untuk menampung konten berita
     var judul by remember { mutableStateOf("Sampah plastik: Reduce dan Reuse dahulu sebelum Recycle") }
-    var deskripsi by remember { mutableStateOf("Indonesia adalah salah satu negara penghasil sampah terbanyak di dunia dengan menduduki urutan kedua kontributor sampah terbanyak di dunia setelah China. Berdasarkan temuan data yang dilansir dari laporan The World Bank bekerja sama dengan Kementerian Koordinator Bidang Kemaritiman dan investasi Republik Indonesia (Kemenko Maritim), Plastic Waste Discharge, menemukan bahwa Indonesia menghasilkan sompah sekitar 7,8 juta ton sampah plastik di lout setiap tahunnya, itu hanyalah sampah plastik, belum termasuk sampah jenis lainnya.\n\nSayangnya, hanya sebagian sampah plastik yang berhasil di daur ulang, Sisanya, sampah akan berakhir di tempat pembuangan akhir, mesin insinerator, menyumbat aliran air hingga mencemari dan mengancam blota lout. Belum cukup disitu, bahkan sampah dari negara lain juga dibuang di Indonesia .") }
+    var deskripsi by remember { mutableStateOf("Indonesia adalah salah satu negara penghasil sampah terbanyak di dunia...") }
     var tanggal by remember { mutableStateOf("22 Juli 2022") }
     var lokasi by remember { mutableStateOf("Indonesia") }
     var sumber by remember { mutableStateOf("Greenpeace Indonesia") }
@@ -61,12 +62,13 @@ fun NewsDetailScreen(navController: NavController, viewModel: BeritaViewModel? =
         if (beritaId != null && viewModel != null) {
             val berita = viewModel.getBeritaById(beritaId)
             if (berita != null) {
-                judul = berita.title
-                deskripsi = berita.description
-                tanggal = berita.date
-                lokasi = if (berita.location.isNotEmpty()) berita.location else "Lokasi tidak tersedia"
+                // SINKRONISASI: Menggunakan judul, deskripsi, createdAt, lokasi, dan cover
+                judul = berita.judul
+                deskripsi = berita.deskripsi
+                tanggal = berita.createdAt
+                lokasi = if (!berita.lokasi.isNullOrEmpty()) berita.lokasi else "Lokasi tidak tersedia"
                 sumber = "User"
-                imageUri = berita.imageUri
+                imageUri = berita.cover
             }
         }
     }
@@ -96,7 +98,7 @@ fun NewsDetailScreen(navController: NavController, viewModel: BeritaViewModel? =
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.ic_launcher_background), // Placeholder logo
+                    painter = painterResource(id = R.drawable.ic_launcher_background),
                     contentDescription = "Source Logo",
                     modifier = Modifier
                         .size(40.dp)
@@ -107,14 +109,14 @@ fun NewsDetailScreen(navController: NavController, viewModel: BeritaViewModel? =
                     Text(text = tanggal, fontSize = 12.sp, color = Color.Gray)
                 }
             }
-            
+
             // Gambar Utama Berita
-            val painter = if (imageUri != null) {
+            val painter = if (!imageUri.isNullOrEmpty()) {
                 rememberAsyncImagePainter(model = Uri.parse(imageUri))
             } else {
                 painterResource(id = imageRes)
             }
-            
+
             Image(
                 painter = painter,
                 contentDescription = "News Image",
@@ -123,11 +125,11 @@ fun NewsDetailScreen(navController: NavController, viewModel: BeritaViewModel? =
                     .height(250.dp),
                 contentScale = ContentScale.Crop
             )
-            
+
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(text = lokasi, fontSize = 14.sp, color = Color.Gray)
                 Spacer(modifier = Modifier.height(8.dp))
-                
+
                 // Judul Berita
                 Text(
                     text = judul,
@@ -135,15 +137,15 @@ fun NewsDetailScreen(navController: NavController, viewModel: BeritaViewModel? =
                     fontSize = 24.sp
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 // Deskripsi Berita
                 Text(
                     text = deskripsi,
                     fontSize = 16.sp,
                     lineHeight = 24.sp
                 )
-                
-                // Jika berita default (statis), tampilkan konten tambahan
+
+                // Jika berita default (statis), tampilkan konten tambahan asli Anda
                 if (beritaId == null) {
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
@@ -153,22 +155,16 @@ fun NewsDetailScreen(navController: NavController, viewModel: BeritaViewModel? =
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Sudah menjadi rahasia umum bahwa selain menjadi ladang penuh sumber daya pangan, Indonesia juga menjadi ladang sampah. Walaupun begitu, fakta itu tidak menyurutkan pelaku usaha pengimpor sampah plastik dari negara kaya\n\nIndonesia sudah lama menjadi salah satu Importir sampah terbesar di dunia Dilansir dari data UN Comtrade, sekitar 188 ribu ton sampah plastik diimpor dari berbagai negara maju pada tahun 2020. Belanda menjadi pengimpor sampah plastik terbesar di Indonesia. Sebanyak 51,5 ribu ton sampah plastik diimpor dari negara tersebut. Tok hanya Belanda, negara seperti Jerman, Slovenia, Amerika Serikat, bahkan Singapura turut menjadi negara pengimpor.",
+                        text = "Sudah menjadi rahasia umum bahwa selain menjadi ladang penuh sumber daya pangan, Indonesia juga menjadi ladang sampah...",
                         fontSize = 16.sp,
                         lineHeight = 24.sp
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Image(
-                        painter = painterResource(id = R.drawable.ic_launcher_foreground), // Placeholder chart
+                        painter = painterResource(id = R.drawable.ic_launcher_foreground),
                         contentDescription = "Chart",
                         modifier = Modifier.fillMaxWidth(),
                         contentScale = ContentScale.FillWidth
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Mereka berdalih sampah yang diimpor dari luar negeri digunakan untuk didaur ulang. Anehnya, alih-alih mendaur ulang sampah di Indonesia yang telah menggunung dan tak tersentuh, justru malah menambah sampah dengan mengimpor dari negara lain. Ditambah, risiko dan dampak besar turut menggentayangi lingkungan dan kesehatan masyarakat akibat regulasi dan kebijakan pemerintah yang kendor.",
-                        fontSize = 16.sp,
-                        lineHeight = 24.sp
                     )
                 }
             }

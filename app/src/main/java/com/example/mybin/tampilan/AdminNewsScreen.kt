@@ -28,6 +28,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue // Tambahkan import ini
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,7 +55,7 @@ import java.util.Locale
 @Composable
 fun AdminNewsScreen(
     navController: NavController,
-    viewModel: BeritaViewModel = viewModel() // Best practice: Inisialisasi default di sini
+    viewModel: BeritaViewModel = viewModel()
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         Image(
@@ -114,6 +115,9 @@ private fun Header() {
 
 @Composable
 private fun Body(navController: NavController, viewModel: BeritaViewModel) {
+    // SINKRONISASI: Ambil State list dari ViewModel
+    val beritaList by viewModel.beritaList //
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -138,8 +142,6 @@ private fun Body(navController: NavController, viewModel: BeritaViewModel) {
             Text(text = "Berita Terbaru", fontWeight = FontWeight.Bold, fontSize = 20.sp)
             Spacer(modifier = Modifier.height(8.dp))
 
-            val beritaList = viewModel.beritaList
-
             data class DisplayItem(
                 val title: String,
                 val source: String,
@@ -149,7 +151,8 @@ private fun Body(navController: NavController, viewModel: BeritaViewModel) {
                 val onClick: () -> Unit
             )
 
-            val combinedList = remember(beritaList.toList()) {
+            // SINKRONISASI: Menggabungkan data hardcoded dengan data dari Database
+            val combinedList = remember(beritaList) {
                 val hardcodedItems = listOf(
                     DisplayItem(
                         title = "Sampah plastik: Reduce dan Reuse dahulu sebelum Recycle",
@@ -169,10 +172,11 @@ private fun Body(navController: NavController, viewModel: BeritaViewModel) {
 
                 val dynamicItems = beritaList.map { berita ->
                     DisplayItem(
-                        title = berita.title,
-                        source = berita.location.ifEmpty { "User" }, // Perbaikan: Menggunakan ifEmpty
-                        date = berita.date,
-                        imageUri = berita.imageUri,
+                        // PERBAIKAN: Menggunakan judul, lokasi, createdAt, dan cover
+                        title = berita.judul,
+                        source = berita.lokasi?.ifEmpty { "User" } ?: "User",
+                        date = berita.createdAt,
+                        imageUri = berita.cover,
                         onClick = { navController.navigate("news_detail_screen?beritaId=${berita.id}") }
                     )
                 }
@@ -198,10 +202,11 @@ private fun Body(navController: NavController, viewModel: BeritaViewModel) {
 }
 
 private fun parseDate(dateStr: String): Date {
-    val locale = Locale.forLanguageTag("id-ID") // Perbaikan: Locale yang tidak deprecated
+    val locale = Locale("id", "ID")
+    // SINKRONISASI: Menambahkan format ISO 8601 yang biasanya dikirim Database (createdAt)
     val patterns = listOf(
+        "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
         "d MMMM yyyy, HH:mm 'WIB'",
-        "d MMMM yyyy, HH:mm",
         "d MMMM yyyy"
     )
 
@@ -228,8 +233,8 @@ private fun NewsItem(imageRes: Int, title: String, source: String, date: String,
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
-            val painter = if (imageUri != null) {
-                rememberAsyncImagePainter(model = imageUri.toUri()) // Perbaikan: Menggunakan toUri()
+            val painter = if (!imageUri.isNullOrEmpty()) {
+                rememberAsyncImagePainter(model = imageUri.toUri())
             } else {
                 painterResource(id = imageRes)
             }
@@ -280,7 +285,6 @@ private fun NewsItem(imageRes: Int, title: String, source: String, date: String,
 @Composable
 fun AdminNewsScreenPreview() {
     MyBinTheme {
-        // Perbaikan Utama: Menggunakan viewModel() alih-alih constructor langsung
         val viewModel: BeritaViewModel = viewModel()
         AdminNewsScreen(rememberNavController(), viewModel)
     }

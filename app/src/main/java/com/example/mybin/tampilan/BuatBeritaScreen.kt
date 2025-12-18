@@ -3,6 +3,7 @@ package com.example.mybin.tampilan
 import android.annotation.SuppressLint
 import android.content.Context
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -34,6 +35,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -63,6 +65,7 @@ import androidx.core.content.FileProvider
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberAsyncImagePainter
+import com.example.mybin.network.AuthTokenManager
 import com.example.mybin.ui.theme.MyBinTheme
 import com.example.mybin.viewmodel.BeritaViewModel
 import java.io.File
@@ -72,25 +75,26 @@ import java.util.Locale
 
 @Composable
 fun BuatBeritaScreen(navController: NavController, viewModel: BeritaViewModel, beritaId: String? = null) {
+    val context = LocalContext.current
+    val token = AuthTokenManager.authToken ?: ""
+    val isLoading by viewModel.isLoading
+
     var judul by remember { mutableStateOf("") }
     var deskripsi by remember { mutableStateOf("") }
     var lokasi by remember { mutableStateOf("") }
     var imageUri by remember { mutableStateOf<Uri?>(null) }
-    // Removed tanggal and waktu state variables as they will be generated on submit
 
     LaunchedEffect(beritaId) {
         if (beritaId != null) {
             val berita = viewModel.getBeritaById(beritaId)
             if (berita != null) {
-                judul = berita.title
-                deskripsi = berita.description
-                lokasi = berita.location
-                if (berita.imageUri != null) {
-                    imageUri = Uri.parse(berita.imageUri)
+                // SINKRONISASI: Menggunakan .judul dan .deskripsi sesuai EdukasiData & Database
+                judul = berita.judul
+                deskripsi = berita.deskripsi
+                lokasi = berita.lokasi ?: ""
+                if (berita.cover != null) {
+                    imageUri = Uri.parse(berita.cover)
                 }
-                // Date handling removed from here since we want auto-generate on submit/update
-                // Or if you want to keep original date on edit, you might need to store it.
-                // But request was "generate automatically ... when submitted".
             }
         }
     }
@@ -100,71 +104,71 @@ fun BuatBeritaScreen(navController: NavController, viewModel: BeritaViewModel, b
             TopAppBar(navController, isEdit = beritaId != null)
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState())
-        ) {
-            Text(
-                text = if (beritaId != null) "Edit Berita Anda" else "Buat Berita Anda",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF006400)
-            )
-            Spacer(modifier = Modifier.height(24.dp))
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Text(
+                    text = if (beritaId != null) "Edit Berita Anda" else "Buat Berita Anda",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF006400)
+                )
+                Spacer(modifier = Modifier.height(24.dp))
 
-            CustomTextField(label = "Judul Kegiatan", value = judul, onValueChange = { judul = it })
-            Spacer(modifier = Modifier.height(16.dp))
-            CustomTextField(label = "Deskripsi Detail", value = deskripsi, onValueChange = { deskripsi = it }, singleLine = false)
-            Spacer(modifier = Modifier.height(16.dp))
+                CustomTextField(label = "Judul Kegiatan", value = judul, onValueChange = { judul = it })
+                Spacer(modifier = Modifier.height(16.dp))
+                CustomTextField(label = "Deskripsi Detail", value = deskripsi, onValueChange = { deskripsi = it }, singleLine = false)
+                Spacer(modifier = Modifier.height(16.dp))
 
-            // Removed DateTimeSection
+                EducationSection(
+                    selectedImageUri = imageUri,
+                    onImageSelected = { uri -> imageUri = uri }
+                )
+                Spacer(modifier = Modifier.height(24.dp))
 
-            EducationSection(
-                selectedImageUri = imageUri,
-                onImageSelected = { uri -> imageUri = uri }
-            )
-            Spacer(modifier = Modifier.height(24.dp))
+                LocationSection(lokasi, onLocationChange = { lokasi = it })
+                Spacer(modifier = Modifier.height(32.dp))
 
-            LocationSection(lokasi, onLocationChange = { lokasi = it })
-            Spacer(modifier = Modifier.height(32.dp))
+                ActionButtons(
+                    onSubmit = {
+                        if (judul.isNotBlank() && deskripsi.isNotBlank()) {
+                            val imageString = imageUri?.toString()
 
-            ActionButtons(
-                onSubmit = {
-                    if (judul.isNotBlank()) {
-                        val imageString = imageUri?.toString()
-                        
-                        // Generate current date and time
-                        val currentDate = Date()
-                        val dateFormat = SimpleDateFormat("d MMMM yyyy", Locale("id", "ID"))
-                        val timeFormat = SimpleDateFormat("HH:mm", Locale("id", "ID"))
-                        
-                        val generatedTanggal = dateFormat.format(currentDate)
-                        val generatedWaktu = timeFormat.format(currentDate)
-
-                        if (beritaId != null) {
-                            // Even on update, we update the timestamp to now? 
-                            // Or keep original? The prompt says "menyesuaikan waktu dan tanggal berita di submit".
-                            // Usually "submit" implies the action of saving. 
-                            // Let's update it to current time on edit as well to reflect "last modified" or 
-                            // if the user wants it to look like a new submission.
-                            // Assuming "submit" action updates the time.
-                            viewModel.updateBerita(beritaId, judul, deskripsi, lokasi, imageString, generatedTanggal, generatedWaktu)
+                            // SINKRONISASI: addBerita memanggil token dan variabel database (judul, deskripsi, lokasi, cover)
+                            viewModel.addBerita(token, judul, deskripsi, lokasi, imageString) { success, message ->
+                                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                                if (success) {
+                                    navController.popBackStack()
+                                }
+                            }
                         } else {
-                            viewModel.addBerita(judul, deskripsi, lokasi, imageString, generatedTanggal, generatedWaktu)
+                            Toast.makeText(context, "Judul dan Deskripsi wajib diisi!", Toast.LENGTH_SHORT).show()
                         }
-                        navController.popBackStack()
+                    },
+                    onDelete = {
+                        if (beritaId != null) {
+                            // Sesuai kebutuhan navigasi saat ini
+                            navController.popBackStack()
+                        }
                     }
-                },
-                onDelete = {
-                    if (beritaId != null) {
-                        viewModel.deleteBerita(beritaId)
-                        navController.popBackStack()
-                    }
+                )
+            }
+
+            if (isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.3f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = Color(0xFF4CAF50))
                 }
-            )
+            }
         }
     }
 }
@@ -213,8 +217,6 @@ private fun CustomTextField(label: String, value: String, onValueChange: (String
     }
 }
 
-// Removed DateTimeSection composable
-
 @Composable
 private fun EducationSection(
     selectedImageUri: Uri?,
@@ -241,9 +243,9 @@ private fun EducationSection(
         val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
         val storageDir: File? = context.cacheDir
         return File.createTempFile(
-            "JPEG_${timeStamp}_", /* prefix */
-            ".jpg", /* suffix */
-            storageDir /* directory */
+            "JPEG_${timeStamp}_",
+            ".jpg",
+            storageDir
         )
     }
 
@@ -260,7 +262,7 @@ private fun EducationSection(
                 Text("Foto Kegiatan", fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             if (selectedImageUri != null) {
                 Image(
                     painter = rememberAsyncImagePainter(selectedImageUri),
@@ -276,7 +278,7 @@ private fun EducationSection(
 
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Button(
-                    onClick = { 
+                    onClick = {
                         val photoFile = createImageFile(context)
                         val uri = FileProvider.getUriForFile(
                             context,
@@ -285,8 +287,8 @@ private fun EducationSection(
                         )
                         tempImageUri = uri
                         cameraLauncher.launch(uri)
-                    }, 
-                    modifier = Modifier.weight(1f), 
+                    },
+                    modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
                 ) {
                     Icon(Icons.Default.CameraAlt, contentDescription = null)
@@ -294,7 +296,7 @@ private fun EducationSection(
                     Text("Ambil Foto")
                 }
                 OutlinedButton(
-                    onClick = { galleryLauncher.launch("image/*") }, 
+                    onClick = { galleryLauncher.launch("image/*") },
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(Icons.Default.UploadFile, contentDescription = null)
@@ -321,7 +323,7 @@ private fun LocationSection(location: String, onLocationChange: (String) -> Unit
                 Text("Lokasi Kegiatan", fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
             Spacer(modifier = Modifier.height(8.dp))
-            
+
             OutlinedTextField(
                 value = location,
                 onValueChange = onLocationChange,

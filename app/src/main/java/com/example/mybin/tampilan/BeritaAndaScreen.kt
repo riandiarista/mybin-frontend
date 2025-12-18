@@ -26,10 +26,10 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue // Tambahkan import ini
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,13 +41,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import com.example.mybin.model.BeritaItemData
+import com.example.mybin.network.EdukasiData // Ganti import ke EdukasiData
 import com.example.mybin.ui.theme.MyBinTheme
 import com.example.mybin.viewmodel.BeritaViewModel
 
 @Composable
 fun BeritaAndaScreen(navController: NavController, viewModel: BeritaViewModel) {
-    val beritaList = viewModel.beritaList
+    // SINKRONISASI: Menggunakan delegasi 'by' agar UI reaktif terhadap perubahan State
+    val beritaList by viewModel.beritaList
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopSection(navController)
@@ -134,10 +135,12 @@ private fun AddBeritaButton(navController: NavController, modifier: Modifier = M
 }
 
 @Composable
-private fun BeritaCard(navController: NavController, berita: BeritaItemData) {
-    val statusColor = if (berita.status == "Naskah") Color(0xFFFFF3E0) else Color(0xFFE8F5E9)
-    val statusTextColor = if (berita.status == "Naskah") Color(0xFFE65100) else Color(0xFF1B5E20)
-    val borderColor = if (berita.status == "Naskah") Color(0xFFFFB74D) else Color(0xFF81C784)
+private fun BeritaCard(navController: NavController, berita: EdukasiData) {
+    // SINKRONISASI: Menyesuaikan status (karena dari database status default biasanya "Diterbitkan")
+    val isNaskah = false // Anda bisa sesuaikan jika database memiliki kolom status
+    val statusColor = if (isNaskah) Color(0xFFFFF3E0) else Color(0xFFE8F5E9)
+    val statusTextColor = if (isNaskah) Color(0xFFE65100) else Color(0xFF1B5E20)
+    val borderColor = if (isNaskah) Color(0xFFFFB74D) else Color(0xFF81C784)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -156,12 +159,17 @@ private fun BeritaCard(navController: NavController, berita: BeritaItemData) {
                     )
             )
             Column(modifier = Modifier.padding(16.dp)) {
-                Text(text = berita.title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                // PERBAIKAN: Menggunakan .judul, .createdAt, dan .lokasi
+                Text(text = berita.judul, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(text = berita.date, fontSize = 12.sp, color = Color.Gray)
-                if (berita.location.isNotEmpty()) {
-                    Text(text = berita.location, fontSize = 12.sp, color = Color.Gray)
+                Text(text = berita.createdAt, fontSize = 12.sp, color = Color.Gray)
+
+                berita.lokasi?.let {
+                    if (it.isNotEmpty()) {
+                        Text(text = it, fontSize = 12.sp, color = Color.Gray)
+                    }
                 }
+
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -173,10 +181,10 @@ private fun BeritaCard(navController: NavController, berita: BeritaItemData) {
                             .background(statusColor, shape = RoundedCornerShape(12.dp))
                             .padding(horizontal = 12.dp, vertical = 4.dp)
                     ) {
-                        Text(text = berita.status, color = statusTextColor, fontSize = 12.sp)
+                        Text(text = "Diterbitkan", color = statusTextColor, fontSize = 12.sp)
                     }
                     Row {
-                        TextButton(onClick = { navController.navigate("edit_berita_screen/${berita.id}") }) {
+                        TextButton(onClick = { navController.navigate("buat_berita_screen?beritaId=${berita.id}") }) {
                             Text("Edit", color = Color(0xFF4CAF50), fontWeight = FontWeight.Bold)
                         }
                         TextButton(onClick = { navController.navigate("news_detail_screen?beritaId=${berita.id}") }) {

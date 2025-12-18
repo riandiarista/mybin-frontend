@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,7 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.net.toUri // Penting untuk .toUri()
+import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
@@ -106,6 +107,9 @@ private fun Header() {
 
 @Composable
 private fun Body(navController: NavController, viewModel: BeritaViewModel) {
+    // SINKRONISASI: Menggunakan delegasi 'by' untuk mendapatkan list terbaru
+    val beritaList by viewModel.beritaList
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -130,8 +134,6 @@ private fun Body(navController: NavController, viewModel: BeritaViewModel) {
             Text(text = "Berita Terbaru", fontWeight = FontWeight.Bold, fontSize = 20.sp)
             Spacer(modifier = Modifier.height(8.dp))
 
-            val beritaList = viewModel.beritaList
-
             data class DisplayItem(
                 val title: String,
                 val source: String,
@@ -141,7 +143,8 @@ private fun Body(navController: NavController, viewModel: BeritaViewModel) {
                 val onClick: () -> Unit
             )
 
-            val combinedList = remember(beritaList.toList()) {
+            // SINKRONISASI: Mapping data dari EdukasiData ke model tampilan UI
+            val combinedList = remember(beritaList) {
                 val hardcodedItems = listOf(
                     DisplayItem(
                         title = "Sampah plastik: Reduce dan Reuse dahulu sebelum Recycle",
@@ -161,10 +164,11 @@ private fun Body(navController: NavController, viewModel: BeritaViewModel) {
 
                 val dynamicItems = beritaList.map { berita ->
                     DisplayItem(
-                        title = berita.title,
-                        source = berita.location.ifEmpty { "User" }, // Perbaikan ifEmpty
-                        date = berita.date,
-                        imageUri = berita.imageUri,
+                        // PERBAIKAN: Menggunakan .judul, .lokasi, .createdAt, dan .cover
+                        title = berita.judul,
+                        source = if (!berita.lokasi.isNullOrEmpty()) berita.lokasi else "User",
+                        date = berita.createdAt,
+                        imageUri = berita.cover,
                         onClick = { navController.navigate("news_detail_screen?beritaId=${berita.id}") }
                     )
                 }
@@ -201,8 +205,10 @@ private fun Body(navController: NavController, viewModel: BeritaViewModel) {
 }
 
 private fun parseDate(dateStr: String): Date {
-    val locale = Locale("in", "ID") // Gunakan "in" untuk Indonesia (menghindari deprecated)
+    val locale = Locale("id", "ID")
+    // SINKRONISASI: Menambahkan format tanggal database ISO 8601
     val patterns = listOf(
+        "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
         "d MMMM yyyy, HH:mm 'WIB'",
         "d MMMM yyyy, HH:mm",
         "d MMMM yyyy"
@@ -213,7 +219,7 @@ private fun parseDate(dateStr: String): Date {
             val sdf = SimpleDateFormat(pattern, locale)
             val date = sdf.parse(dateStr)
             if (date != null) return date
-        } catch (_: Exception) { // "_" karena variabel 'e' tidak digunakan
+        } catch (_: Exception) {
             // continue
         }
     }
@@ -232,7 +238,7 @@ private fun NewsItem(imageRes: Int, title: String, source: String, date: String,
     ) {
         Column {
             val painter = if (!imageUri.isNullOrEmpty()) {
-                rememberAsyncImagePainter(model = imageUri.toUri()) // Perbaikan String.toUri()
+                rememberAsyncImagePainter(model = imageUri.toUri())
             } else {
                 painterResource(id = imageRes)
             }
@@ -283,8 +289,6 @@ private fun NewsItem(imageRes: Int, title: String, source: String, date: String,
 @Composable
 fun NewsScreenPreview() {
     MyBinTheme {
-        // PERBAIKAN: Gunakan viewModel() dari lifecycle-viewmodel-compose
-        // agar tidak membuat instance ViewModel manual di dalam Composable
         val mockViewModel: BeritaViewModel = viewModel()
         NewsScreen(rememberNavController(), mockViewModel)
     }
