@@ -3,13 +3,7 @@ package com.example.mybin.network
 import com.example.mybin.model.SampahRequest
 import com.example.mybin.model.SampahResponse
 import retrofit2.Call
-import retrofit2.http.Body
-import retrofit2.http.POST
-import retrofit2.http.Header
-import retrofit2.http.GET
-import retrofit2.http.PUT
-import retrofit2.http.Path
-import retrofit2.http.DELETE
+import retrofit2.http.*
 
 // --- MODEL DATA SAMPAH ---
 data class Sampah(
@@ -27,10 +21,9 @@ data class ListSampahResponse(
     val data: List<Sampah>
 )
 
-// --- MODEL DATA SETORAN (BARU) ---
-// Model ini digunakan untuk mengirim data dari AddAddressScreen ke backend
+// --- MODEL DATA SETORAN ---
 data class SetoranRequest(
-    val sampahIds: String, // Berisi ID sampah yang dipisah koma, misal: "1,2,3"
+    val sampahIds: String,
     val totalKoin: Int,
     val lokasi: String
 )
@@ -115,8 +108,7 @@ interface ApiService {
         @Header("Authorization") token: String
     ): Call<SampahResponse>
 
-    // --- MODUL SETORAN (BARU) ---
-    // Endpoint untuk memproses data dari AddAddressScreen
+    // --- MODUL SETORAN ---
     @POST("api/setoran")
     fun createSetoran(
         @Header("Authorization") token: String,
@@ -134,4 +126,19 @@ interface ApiService {
     fun getEdukasi(
         @Header("Authorization") token: String
     ): Call<ListEdukasiResponse>
+
+    // PERBAIKAN: Tambahkan rute PUT untuk melakukan update berita edukasi berdasarkan ID
+    @PUT("api/edukasi/{id}")
+    fun updateEdukasi(
+        @Path("id") id: String,
+        @Header("Authorization") token: String,
+        @Body request: EdukasiRequest
+    ): Call<EdukasiResponse>
+
+    // TAMBAHAN: Tambahkan rute DELETE untuk menghapus berita edukasi berdasarkan ID
+    @DELETE("api/edukasi/{id}")
+    fun deleteEdukasi(
+        @Path("id") id: String,
+        @Header("Authorization") token: String
+    ): Call<EdukasiResponse>
 }

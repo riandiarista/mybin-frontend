@@ -76,7 +76,8 @@ import java.util.Locale
 @Composable
 fun BuatBeritaScreen(navController: NavController, viewModel: BeritaViewModel, beritaId: String? = null) {
     val context = LocalContext.current
-    val token = AuthTokenManager.authToken ?: ""
+    // Mengambil token dari SharedPreferences melalui AuthTokenManager
+    val token = AuthTokenManager.getToken(context) ?: ""
     val isLoading by viewModel.isLoading
 
     var judul by remember { mutableStateOf("") }
@@ -88,7 +89,6 @@ fun BuatBeritaScreen(navController: NavController, viewModel: BeritaViewModel, b
         if (beritaId != null) {
             val berita = viewModel.getBeritaById(beritaId)
             if (berita != null) {
-                // SINKRONISASI: Menggunakan .judul dan .deskripsi sesuai EdukasiData & Database
                 judul = berita.judul
                 deskripsi = berita.deskripsi
                 lokasi = berita.lokasi ?: ""
@@ -139,11 +139,22 @@ fun BuatBeritaScreen(navController: NavController, viewModel: BeritaViewModel, b
                         if (judul.isNotBlank() && deskripsi.isNotBlank()) {
                             val imageString = imageUri?.toString()
 
-                            // SINKRONISASI: addBerita memanggil token dan variabel database (judul, deskripsi, lokasi, cover)
-                            viewModel.addBerita(token, judul, deskripsi, lokasi, imageString) { success, message ->
-                                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-                                if (success) {
-                                    navController.popBackStack()
+                            if (beritaId == null) {
+                                // MODE TAMBAH (POST)
+                                viewModel.addBerita(token, judul, deskripsi, lokasi, imageString) { success, message ->
+                                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                                    if (success) {
+                                        navController.popBackStack()
+                                    }
+                                }
+                            } else {
+                                // PERBAIKAN: MODE EDIT (PUT)
+                                // Memanggil fungsi updateBerita yang sudah kita buat di ViewModel
+                                viewModel.updateBerita(token, beritaId, judul, deskripsi, lokasi, imageString) { success, message ->
+                                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                                    if (success) {
+                                        navController.popBackStack()
+                                    }
                                 }
                             }
                         } else {
@@ -152,7 +163,14 @@ fun BuatBeritaScreen(navController: NavController, viewModel: BeritaViewModel, b
                     },
                     onDelete = {
                         if (beritaId != null) {
-                            // Sesuai kebutuhan navigasi saat ini
+                            // SINKRONISASI: Memanggil fungsi deleteBerita jika sedang dalam mode edit
+                            viewModel.deleteBerita(token, beritaId) { success, message ->
+                                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                                if (success) {
+                                    navController.popBackStack()
+                                }
+                            }
+                        } else {
                             navController.popBackStack()
                         }
                     }

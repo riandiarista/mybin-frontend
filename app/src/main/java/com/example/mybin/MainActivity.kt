@@ -116,6 +116,8 @@ class MainActivity : ComponentActivity() {
                     composable("NewsScreen") {
                         NewsScreen(navController, beritaViewModel)
                     }
+
+                    // PENYELARASAN: Pastikan rute detail menggunakan format yang konsisten
                     composable(
                         "news_detail_screen?beritaId={beritaId}",
                         arguments = listOf(navArgument("beritaId") {
@@ -127,19 +129,25 @@ class MainActivity : ComponentActivity() {
                         val beritaId = backStackEntry.arguments?.getString("beritaId")
                         NewsDetailScreen(navController, beritaViewModel, beritaId)
                     }
+
                     composable("berita_anda_screen") {
                         BeritaAndaScreen(navController, beritaViewModel)
                     }
+
                     composable("buat_berita_screen") {
                         BuatBeritaScreen(navController, beritaViewModel)
                     }
+
+                    // PERBAIKAN: Rute khusus untuk Edit Berita agar ID terkirim dengan benar ke BuatBeritaScreen
                     composable(
                         "edit_berita_screen/{beritaId}",
                         arguments = listOf(navArgument("beritaId") { type = NavType.StringType })
                     ) { backStackEntry ->
                         val beritaId = backStackEntry.arguments?.getString("beritaId")
+                        // Memanggil BuatBeritaScreen dengan beritaId untuk mode EDIT
                         BuatBeritaScreen(navController, beritaViewModel, beritaId)
                     }
+
                     composable("notifikasi_screen") {
                         NotifikasiScreen(navController)
                     }
@@ -196,12 +204,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun askNotificationPermission() {
-        // Izin ini hanya diperlukan untuk Android 13 (Tiramisu / API 33) ke atas
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
                 PackageManager.PERMISSION_GRANTED
             ) {
-                // Minta izin secara langsung
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }

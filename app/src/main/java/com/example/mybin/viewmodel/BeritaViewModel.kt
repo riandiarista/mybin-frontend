@@ -15,17 +15,12 @@ import retrofit2.Response
 
 class BeritaViewModel : ViewModel() {
 
-    // State untuk menampung daftar berita dari Database (Menggunakan EdukasiData)
     private val _beritaList = mutableStateOf<List<EdukasiData>>(emptyList())
     val beritaList: State<List<EdukasiData>> = _beritaList
 
-    // State untuk status loading
     private val _isLoading = mutableStateOf(false)
     val isLoading: State<Boolean> = _isLoading
 
-    /**
-     * Fungsi untuk mengambil semua data edukasi dari Database
-     */
     fun fetchBerita(token: String) {
         _isLoading.value = true
         ApiClient.instance.getEdukasi("Bearer $token").enqueue(object : Callback<ListEdukasiResponse> {
@@ -43,33 +38,21 @@ class BeritaViewModel : ViewModel() {
         })
     }
 
-    /**
-     * Fungsi utama untuk mengirim berita baru ke Database
-     * Menggunakan standar: judul, deskripsi, lokasi, cover
-     */
     fun addBerita(
         token: String,
-        judul: String,      // Standar Baru
-        deskripsi: String,  // Standar Baru
-        lokasi: String,     // Standar Baru
-        cover: String?,     // Standar Baru
+        judul: String,
+        deskripsi: String,
+        lokasi: String,
+        cover: String?,
         onResult: (Boolean, String) -> Unit
     ) {
         _isLoading.value = true
-
-        // Memasukkan variabel ke Request yang akan dikirim ke Backend
-        val request = EdukasiRequest(
-            judul = judul,
-            deskripsi = deskripsi,
-            lokasi = lokasi,
-            cover = cover
-        )
+        val request = EdukasiRequest(judul, deskripsi, lokasi, cover)
 
         ApiClient.instance.createEdukasi("Bearer $token", request).enqueue(object : Callback<EdukasiResponse> {
             override fun onResponse(call: Call<EdukasiResponse>, response: Response<EdukasiResponse>) {
                 _isLoading.value = false
                 if (response.isSuccessful) {
-                    // Refresh data agar list di NewsScreen terupdate otomatis
                     fetchBerita(token)
                     onResult(true, "Berita berhasil diterbitkan!")
                 } else {
@@ -85,10 +68,68 @@ class BeritaViewModel : ViewModel() {
     }
 
     /**
-     * Mencari detail berita berdasarkan ID dari list yang sudah ada
+     * PERBAIKAN: Fungsi untuk mengupdate berita yang sudah ada di Database.
+     * Fungsi ini memanggil endpoint PUT api/edukasi/{id}
      */
+    fun updateBerita(
+        token: String,
+        id: String,
+        judul: String,
+        deskripsi: String,
+        lokasi: String,
+        cover: String?,
+        onResult: (Boolean, String) -> Unit
+    ) {
+        _isLoading.value = true
+        val request = EdukasiRequest(judul, deskripsi, lokasi, cover)
+
+        ApiClient.instance.updateEdukasi(id, "Bearer $token", request).enqueue(object : Callback<EdukasiResponse> {
+            override fun onResponse(call: Call<EdukasiResponse>, response: Response<EdukasiResponse>) {
+                _isLoading.value = false
+                if (response.isSuccessful) {
+                    // Refresh list agar data yang diedit langsung muncul yang terbaru
+                    fetchBerita(token)
+                    onResult(true, "Berita berhasil diperbarui!")
+                } else {
+                    onResult(false, "Gagal memperbarui berita: ${response.message()}")
+                }
+            }
+
+            override fun onFailure(call: Call<EdukasiResponse>, t: Throwable) {
+                _isLoading.value = false
+                onResult(false, "Terjadi kesalahan jaringan: ${t.message}")
+            }
+        })
+    }
+
+    /**
+     * TAMBAHAN: Fungsi untuk menghapus berita dari Database.
+     */
+    fun deleteBerita(
+        token: String,
+        id: String,
+        onResult: (Boolean, String) -> Unit
+    ) {
+        _isLoading.value = true
+        ApiClient.instance.deleteEdukasi(id, "Bearer $token").enqueue(object : Callback<EdukasiResponse> {
+            override fun onResponse(call: Call<EdukasiResponse>, response: Response<EdukasiResponse>) {
+                _isLoading.value = false
+                if (response.isSuccessful) {
+                    fetchBerita(token)
+                    onResult(true, "Berita berhasil dihapus!")
+                } else {
+                    onResult(false, "Gagal menghapus berita")
+                }
+            }
+
+            override fun onFailure(call: Call<EdukasiResponse>, t: Throwable) {
+                _isLoading.value = false
+                onResult(false, "Kesalahan jaringan: ${t.message}")
+            }
+        })
+    }
+
     fun getBeritaById(id: String?): EdukasiData? {
-        // ID di database berbentuk Int, kita konversi id (String) dari navigasi ke Int
         return _beritaList.value.find { it.id.toString() == id }
     }
 }

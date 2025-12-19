@@ -1,7 +1,13 @@
 package com.example.mybin.network
 
+import android.content.Context
+
 // Menggunakan objek singleton sederhana untuk menyimpan token sementara
-// (Di aplikasi produksi, gunakan DataStore/SharedPreferences)
 object AuthTokenManager {
     var authToken: String? = null
+
+    // Tambahkan fungsi ini saja supaya tidak unresolved reference di tampilan lain
+    fun getToken(context: Context): String? {
+        return authToken
+    }
 }

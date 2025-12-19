@@ -1,5 +1,6 @@
 package com.example.mybin.tampilan
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,26 +30,37 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue // Tambahkan import ini
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import com.example.mybin.network.EdukasiData // Ganti import ke EdukasiData
+import com.example.mybin.network.AuthTokenManager
+import com.example.mybin.network.EdukasiData
 import com.example.mybin.ui.theme.MyBinTheme
 import com.example.mybin.viewmodel.BeritaViewModel
 
 @Composable
 fun BeritaAndaScreen(navController: NavController, viewModel: BeritaViewModel) {
-    // SINKRONISASI: Menggunakan delegasi 'by' agar UI reaktif terhadap perubahan State
     val beritaList by viewModel.beritaList
+    val context = LocalContext.current
+    val token = AuthTokenManager.getToken(context) ?: ""
+
+    // Memastikan data terbaru diambil saat layar dibuka
+    LaunchedEffect(Unit) {
+        if (token.isNotEmpty()) {
+            viewModel.fetchBerita(token)
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopSection(navController)
@@ -64,9 +76,14 @@ fun BeritaAndaScreen(navController: NavController, viewModel: BeritaViewModel) {
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
+
+            if (viewModel.isLoading.value) {
+                Text("Memuat data...", modifier = Modifier.align(Alignment.CenterHorizontally))
+            }
+
             LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 items(beritaList) { berita ->
-                    BeritaCard(navController, berita)
+                    BeritaCard(navController, berita, viewModel, token)
                 }
             }
         }
@@ -135,9 +152,14 @@ private fun AddBeritaButton(navController: NavController, modifier: Modifier = M
 }
 
 @Composable
-private fun BeritaCard(navController: NavController, berita: EdukasiData) {
-    // SINKRONISASI: Menyesuaikan status (karena dari database status default biasanya "Diterbitkan")
-    val isNaskah = false // Anda bisa sesuaikan jika database memiliki kolom status
+private fun BeritaCard(
+    navController: NavController,
+    berita: EdukasiData,
+    viewModel: BeritaViewModel,
+    token: String
+) {
+    val context = LocalContext.current
+    val isNaskah = false
     val statusColor = if (isNaskah) Color(0xFFFFF3E0) else Color(0xFFE8F5E9)
     val statusTextColor = if (isNaskah) Color(0xFFE65100) else Color(0xFF1B5E20)
     val borderColor = if (isNaskah) Color(0xFFFFB74D) else Color(0xFF81C784)
@@ -159,7 +181,6 @@ private fun BeritaCard(navController: NavController, berita: EdukasiData) {
                     )
             )
             Column(modifier = Modifier.padding(16.dp)) {
-                // PERBAIKAN: Menggunakan .judul, .createdAt, dan .lokasi
                 Text(text = berita.judul, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(text = berita.createdAt, fontSize = 12.sp, color = Color.Gray)
@@ -184,11 +205,27 @@ private fun BeritaCard(navController: NavController, berita: EdukasiData) {
                         Text(text = "Diterbitkan", color = statusTextColor, fontSize = 12.sp)
                     }
                     Row {
-                        TextButton(onClick = { navController.navigate("buat_berita_screen?beritaId=${berita.id}") }) {
+                        // Fitur Hapus (Delete)
+                        TextButton(onClick = {
+                            viewModel.deleteBerita(token, berita.id.toString()) { success, message ->
+                                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                            }
+                        }) {
+                            Text("Hapus", color = Color.Red, fontWeight = FontWeight.Bold)
+                        }
+
+                        // Fitur Edit
+                        TextButton(onClick = {
+                            // Pastikan parameter beritaId sesuai dengan NavHost di MainActivity
+                            navController.navigate("edit_berita_screen/${berita.id}")
+                        }) {
                             Text("Edit", color = Color(0xFF4CAF50), fontWeight = FontWeight.Bold)
                         }
-                        TextButton(onClick = { navController.navigate("news_detail_screen?beritaId=${berita.id}") }) {
-                            Text("Lihat Detail")
+
+                        TextButton(onClick = {
+                            navController.navigate("news_detail_screen?beritaId=${berita.id}")
+                        }) {
+                            Text("Lihat")
                         }
                     }
                 }
