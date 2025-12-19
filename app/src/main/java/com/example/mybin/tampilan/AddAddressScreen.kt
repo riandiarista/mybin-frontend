@@ -2,6 +2,7 @@ package com.example.mybin.tampilan
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -29,18 +30,20 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.mybin.model.SampahData
-import com.example.mybin.model.SetoranData
 import com.example.mybin.ui.theme.MyBinTheme
 import com.example.mybin.viewmodel.SampahViewModel
 import com.example.mybin.viewmodel.SetoranViewModel
-import java.text.SimpleDateFormat
 import java.util.Calendar
-import java.util.Date
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddAddressScreen(navController: NavController, sampahViewModel: SampahViewModel = viewModel(), setoranViewModel: SetoranViewModel? = null, sampahIds: String?, totalKoin: Int?) {
+fun AddAddressScreen(
+    navController: NavController,
+    sampahViewModel: SampahViewModel = viewModel(),
+    setoranViewModel: SetoranViewModel = viewModel(), // Dipastikan tidak null
+    sampahIds: String?,
+    totalKoin: Int?
+) {
     var hariTanggal by remember { mutableStateOf("") }
     var jam by remember { mutableStateOf("") }
     var phoneNumber by remember { mutableStateOf("") }
@@ -49,6 +52,9 @@ fun AddAddressScreen(navController: NavController, sampahViewModel: SampahViewMo
 
     val context = LocalContext.current
     val calendar = Calendar.getInstance()
+
+    // Indikator Loading untuk tombol
+    var isSubmitting by remember { mutableStateOf(false) }
 
     val datePickerDialog = DatePickerDialog(
         context,
@@ -92,9 +98,7 @@ fun AddAddressScreen(navController: NavController, sampahViewModel: SampahViewMo
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
                     }
                 },
-                actions = {
-                    Spacer(modifier = Modifier.width(48.dp))
-                },
+                actions = { Spacer(modifier = Modifier.width(48.dp)) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         },
@@ -116,11 +120,11 @@ fun AddAddressScreen(navController: NavController, sampahViewModel: SampahViewMo
             ) {
                 Column(modifier = Modifier.padding(vertical = 8.dp)) {
                     PickerInfoRow(icon = Icons.Default.DateRange, label = "Hari & Tanggal", value = hariTanggal, onClick = { datePickerDialog.show() })
-                    Divider(color = Color.LightGray.copy(alpha = 0.4f), thickness = 1.dp, modifier = Modifier.padding(horizontal = 16.dp))
+                    HorizontalDivider(color = Color.LightGray.copy(alpha = 0.4f), thickness = 1.dp, modifier = Modifier.padding(horizontal = 16.dp))
                     PickerInfoRow(icon = Icons.Default.AccessTime, label = "Jam", value = jam, onClick = { timePickerDialog.show() })
-                    Divider(color = Color.LightGray.copy(alpha = 0.4f), thickness = 1.dp, modifier = Modifier.padding(horizontal = 16.dp))
+                    HorizontalDivider(color = Color.LightGray.copy(alpha = 0.4f), thickness = 1.dp, modifier = Modifier.padding(horizontal = 16.dp))
                     InfoRow(icon = Icons.Default.Phone, label = "Phone number", value = phoneNumber, onValueChange = { phoneNumber = it })
-                    Divider(color = Color.LightGray.copy(alpha = 0.4f), thickness = 1.dp, modifier = Modifier.padding(horizontal = 16.dp))
+                    HorizontalDivider(color = Color.LightGray.copy(alpha = 0.4f), thickness = 1.dp, modifier = Modifier.padding(horizontal = 16.dp))
                     InfoRow(icon = Icons.Default.LocationOn, label = "Address", value = address, onValueChange = { address = it })
                 }
             }
@@ -129,38 +133,60 @@ fun AddAddressScreen(navController: NavController, sampahViewModel: SampahViewMo
             Spacer(modifier = Modifier.height(24.dp))
             totalKoin?.let { EstimasiPointsCard(it) }
             Spacer(modifier = Modifier.height(24.dp))
+
             Button(
                 onClick = {
-                    if (hariTanggal.isNotEmpty() && jam.isNotEmpty() && address.isNotEmpty() && selectedSampahList.isNotEmpty()) {
-                        val dateFormat = SimpleDateFormat("d/M/yyyy", Locale.getDefault())
-                        val date = dateFormat.parse(hariTanggal)
-                        val formattedDate = SimpleDateFormat("dd MMMM yyyy", Locale("id", "ID")).format(date ?: Date())
-                        val setoranData = SetoranData(
-                            id = "#" + System.currentTimeMillis().toString().takeLast(8),
-                            tanggal = "$formattedDate, $jam WIB",
-                            jenis = selectedSampahList.joinToString(", ") { "${it.totalBobot} ${it.jenisSampah}" },
+                    if (hariTanggal.isNotEmpty() && jam.isNotEmpty() && address.isNotEmpty() && !sampahIds.isNullOrEmpty()) {
+                        isSubmitting = true
+
+                        // Memanggil fungsi submitSetoran di ViewModel sesuai langkah-langkah
+                        setoranViewModel.submitSetoran(
+                            sampahIds = sampahIds,
+                            totalKoin = totalKoin ?: 0,
                             lokasi = address,
-                            status = "Diproses",
-                            totalKoin = totalKoin ?: 0
+                            onSuccess = { message ->
+                                isSubmitting = false
+                                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+
+                                // Memuat ulang data sampah agar list sampah yang sudah disetor hilang dari database lokal
+                                sampahViewModel.loadSampah(
+                                    onSuccess = {
+                                        navController.navigate("DataSetoranScreen") {
+                                            popUpTo("DataSetoranScreen") { inclusive = true }
+                                        }
+                                    },
+                                    onError = { /* Error refresh diabaikan tetap pindah */ }
+                                )
+                            },
+                            onError = { error ->
+                                isSubmitting = false
+                                Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+                            }
                         )
-                        setoranViewModel?.addSetoran(setoranData)
-                        navController.navigate("DataSetoranScreen") {
-                            popUpTo("DataSetoranScreen") { inclusive = true }
-                        }
+                    } else {
+                        Toast.makeText(context, "Lengkapi semua data dan pilih sampah", Toast.LENGTH_SHORT).show()
                     }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
+                enabled = !isSubmitting,
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB3F5B3))
             ) {
-                Text("Selesai", color = Color(0xFF1F4B1F), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                if (isSubmitting) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color(0xFF1F4B1F))
+                } else {
+                    Text("Selesai", color = Color(0xFF1F4B1F), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                }
             }
-             Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
+
+// ... Fungsi Row, TextField, Dropdown, dan Card di bawah tetap sama ...
+// (Hanya ganti Divider menjadi HorizontalDivider untuk kompatibilitas Material3 terbaru)
 
 @Composable
 private fun PickerInfoRow(icon: ImageVector, label: String, value: String, onClick: () -> Unit) {
@@ -319,13 +345,5 @@ private fun EstimasiPointsCard(totalKoin: Int) {
                 }
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun AddAddressScreenPreview() {
-    MyBinTheme {
-        AddAddressScreen(rememberNavController(), viewModel(), null, null, 0)
     }
 }

@@ -27,6 +27,19 @@ data class ListSampahResponse(
     val data: List<Sampah>
 )
 
+// --- MODEL DATA SETORAN (BARU) ---
+// Model ini digunakan untuk mengirim data dari AddAddressScreen ke backend
+data class SetoranRequest(
+    val sampahIds: String, // Berisi ID sampah yang dipisah koma, misal: "1,2,3"
+    val totalKoin: Int,
+    val lokasi: String
+)
+
+data class SetoranResponse(
+    val message: String,
+    val total_data: Int?
+)
+
 // --- MODEL DATA EDUKASI (BERITA) ---
 data class EdukasiRequest(
     val judul: String,
@@ -60,7 +73,7 @@ data class ListEdukasiResponse(
 data class LoginRequest(val username: String, val password: String)
 data class LoginResponse(val message: String, val token: String?)
 
-// --- MODEL FCM (BARU) ---
+// --- MODEL FCM ---
 data class FCMRequest(
     val fcm_token: String
 )
@@ -71,7 +84,6 @@ interface ApiService {
     @POST("api/login")
     fun login(@Body request: LoginRequest): Call<LoginResponse>
 
-    // Endpoint Baru untuk Update FCM Token
     @POST("api/auth/update-fcm")
     fun updateFCMToken(
         @Header("Authorization") token: String,
@@ -102,6 +114,14 @@ interface ApiService {
         @Path("id") id: String,
         @Header("Authorization") token: String
     ): Call<SampahResponse>
+
+    // --- MODUL SETORAN (BARU) ---
+    // Endpoint untuk memproses data dari AddAddressScreen
+    @POST("api/setoran")
+    fun createSetoran(
+        @Header("Authorization") token: String,
+        @Body request: SetoranRequest
+    ): Call<SetoranResponse>
 
     // --- MODUL EDUKASI (BERITA) ---
     @POST("api/edukasi")

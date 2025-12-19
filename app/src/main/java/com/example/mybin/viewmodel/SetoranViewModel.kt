@@ -1,38 +1,78 @@
 package com.example.mybin.viewmodel
 
+import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.mybin.model.SetoranData
+import com.example.mybin.network.ApiClient
+import com.example.mybin.network.AuthTokenManager
+import com.example.mybin.network.SetoranRequest
+import com.example.mybin.network.SetoranResponse
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 
 class SetoranViewModel : ViewModel() {
     private val _setoranList = mutableStateListOf<SetoranData>()
     val setoranList: List<SetoranData> get() = _setoranList
 
-    init {
-        // Dummy data
-        _setoranList.add(
-            SetoranData(
-                id = "#20251016",
-                tanggal = "16 Oktober 2025, 09:00 WIB",
-                jenis = "5.0 kg Kertas & Kardus",
-                lokasi = "Bank Sampah Sentral, Jakarta",
-                status = "Diproses",
-                totalKoin = 5000
-            )
-        )
-        _setoranList.add(
-            SetoranData(
-                id = "#20251015",
-                tanggal = "15 Oktober 2025, 14:30 WIB",
-                jenis = "3.5 kg Sampah Campur (Plastik & Kertas)",
-                lokasi = "Jl. Mahoni No. 5, Padang",
-                status = "Selesai",
-                totalKoin = 3500
-            )
-        )
-    }
-
+    // Fungsi untuk menambah data secara lokal (untuk dummy atau testing)
     fun addSetoran(setoran: SetoranData) {
         _setoranList.add(0, setoran)
+    }
+
+    /**
+     * Langkah Selanjutnya: Fungsi untuk mengirim data setoran ke API Backend.
+     * Fungsi ini akan memindahkan data dari tabel 'sampahs' ke 'setorans' di server.
+     */
+    fun submitSetoran(
+        sampahIds: String,
+        totalKoin: Int,
+        lokasi: String,
+        onSuccess: (String) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        // 1. Ambil Token Autentikasi
+        val token = AuthTokenManager.authToken
+        if (token.isNullOrEmpty()) {
+            onError("Sesi berakhir. Silakan login kembali.")
+            return
+        }
+
+        // 2. Siapkan Request Body sesuai model di ApiService.kt
+        val request = SetoranRequest(
+            sampahIds = sampahIds,
+            totalKoin = totalKoin,
+            lokasi = lokasi
+        )
+
+        // 3. Jalankan pemanggilan API di background thread
+        viewModelScope.launch(Dispatchers.IO) {
+            ApiClient.instance.createSetoran(
+                token = "Bearer $token",
+                request = request
+            ).enqueue(object : Callback<SetoranResponse> {
+                override fun onResponse(call: Call<SetoranResponse>, response: Response<SetoranResponse>) {
+                    if (response.isSuccessful) {
+                        // Jika berhasil, panggil callback sukses
+                        onSuccess(response.body()?.message ?: "Setoran berhasil diproses!")
+                    } else {
+                        // Jika gagal dari sisi server (misal: ID tidak ditemukan)
+                        val errorMsg = response.errorBody()?.string() ?: "Gagal memproses data"
+                        onError("Error ${response.code()}: $errorMsg")
+                        Log.e("API_SETORAN_ERROR", errorMsg)
+                    }
+                }
+
+                override fun onFailure(call: Call<SetoranResponse>, t: Throwable) {
+                    // Jika gagal koneksi/network error
+                    onError("Gagal terhubung ke server: ${t.message}")
+                    Log.e("API_SETORAN_FAIL", t.message ?: "Unknown failure")
+                }
+            })
+        }
     }
 }
