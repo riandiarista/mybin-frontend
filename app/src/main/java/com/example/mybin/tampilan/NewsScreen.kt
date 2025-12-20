@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -43,6 +44,11 @@ import java.util.Locale
 
 @Composable
 fun NewsScreen(navController: NavController, viewModel: BeritaViewModel) {
+    // TAMBAHAN: Memicu fetch data saat layar dibuka
+    LaunchedEffect(Unit) {
+        viewModel.fetchBerita()
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Image(
             painter = painterResource(id = R.drawable.orang),
@@ -107,8 +113,8 @@ private fun Header() {
 
 @Composable
 private fun Body(navController: NavController, viewModel: BeritaViewModel) {
-    // SINKRONISASI: Menggunakan delegasi 'by' untuk mendapatkan list terbaru
     val beritaList by viewModel.beritaList
+    val isLoading by viewModel.isLoading
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -134,6 +140,14 @@ private fun Body(navController: NavController, viewModel: BeritaViewModel) {
             Text(text = "Berita Terbaru", fontWeight = FontWeight.Bold, fontSize = 20.sp)
             Spacer(modifier = Modifier.height(8.dp))
 
+            // Loading indicator
+            if (isLoading && beritaList.isEmpty()) {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                    color = Color(0xFF4CAF50)
+                )
+            }
+
             data class DisplayItem(
                 val title: String,
                 val source: String,
@@ -143,7 +157,6 @@ private fun Body(navController: NavController, viewModel: BeritaViewModel) {
                 val onClick: () -> Unit
             )
 
-            // SINKRONISASI: Mapping data dari EdukasiData ke model tampilan UI
             val combinedList = remember(beritaList) {
                 val hardcodedItems = listOf(
                     DisplayItem(
@@ -164,9 +177,8 @@ private fun Body(navController: NavController, viewModel: BeritaViewModel) {
 
                 val dynamicItems = beritaList.map { berita ->
                     DisplayItem(
-                        // PERBAIKAN: Menggunakan .judul, .lokasi, .createdAt, dan .cover
                         title = berita.judul,
-                        source = if (!berita.lokasi.isNullOrEmpty()) berita.lokasi else "User",
+                        source = if (!berita.lokasi.isNullOrEmpty()) berita.lokasi!! else "User",
                         date = berita.createdAt,
                         imageUri = berita.cover,
                         onClick = { navController.navigate("news_detail_screen?beritaId=${berita.id}") }
@@ -206,9 +218,9 @@ private fun Body(navController: NavController, viewModel: BeritaViewModel) {
 
 private fun parseDate(dateStr: String): Date {
     val locale = Locale("id", "ID")
-    // SINKRONISASI: Menambahkan format tanggal database ISO 8601
     val patterns = listOf(
         "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+        "yyyy-MM-dd HH:mm:ss",
         "d MMMM yyyy, HH:mm 'WIB'",
         "d MMMM yyyy, HH:mm",
         "d MMMM yyyy"
@@ -219,9 +231,7 @@ private fun parseDate(dateStr: String): Date {
             val sdf = SimpleDateFormat(pattern, locale)
             val date = sdf.parse(dateStr)
             if (date != null) return date
-        } catch (_: Exception) {
-            // continue
-        }
+        } catch (_: Exception) { }
     }
     return Date(0)
 }
@@ -285,6 +295,7 @@ private fun NewsItem(imageRes: Int, title: String, source: String, date: String,
     }
 }
 
+// PREVIEW TETAP ADA DISINI
 @Preview(showBackground = true)
 @Composable
 fun NewsScreenPreview() {

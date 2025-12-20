@@ -21,13 +21,22 @@ class BeritaViewModel : ViewModel() {
     private val _isLoading = mutableStateOf(false)
     val isLoading: State<Boolean> = _isLoading
 
-    fun fetchBerita(token: String) {
+    // PERBAIKAN: Inisialisasi otomatis agar data muncul saat NewsScreen dibuka
+    init {
+        fetchBerita()
+    }
+
+    // PERBAIKAN: Parameter token dihilangkan agar bisa diakses secara publik oleh NewsScreen
+    fun fetchBerita() {
         _isLoading.value = true
-        ApiClient.instance.getEdukasi("Bearer $token").enqueue(object : Callback<ListEdukasiResponse> {
+        ApiClient.instance.getEdukasi().enqueue(object : Callback<ListEdukasiResponse> {
             override fun onResponse(call: Call<ListEdukasiResponse>, response: Response<ListEdukasiResponse>) {
                 _isLoading.value = false
                 if (response.isSuccessful) {
                     _beritaList.value = response.body()?.data ?: emptyList()
+                    Log.d("BeritaViewModel", "Fetch Success: ${_beritaList.value.size} items")
+                } else {
+                    Log.e("BeritaViewModel", "Fetch Failed: ${response.message()}")
                 }
             }
 
@@ -53,7 +62,8 @@ class BeritaViewModel : ViewModel() {
             override fun onResponse(call: Call<EdukasiResponse>, response: Response<EdukasiResponse>) {
                 _isLoading.value = false
                 if (response.isSuccessful) {
-                    fetchBerita(token)
+                    // Refresh list tanpa token
+                    fetchBerita()
                     onResult(true, "Berita berhasil diterbitkan!")
                 } else {
                     onResult(false, "Gagal menerbitkan berita: ${response.message()}")
@@ -67,10 +77,6 @@ class BeritaViewModel : ViewModel() {
         })
     }
 
-    /**
-     * PERBAIKAN: Fungsi untuk mengupdate berita yang sudah ada di Database.
-     * Fungsi ini memanggil endpoint PUT api/edukasi/{id}
-     */
     fun updateBerita(
         token: String,
         id: String,
@@ -87,8 +93,7 @@ class BeritaViewModel : ViewModel() {
             override fun onResponse(call: Call<EdukasiResponse>, response: Response<EdukasiResponse>) {
                 _isLoading.value = false
                 if (response.isSuccessful) {
-                    // Refresh list agar data yang diedit langsung muncul yang terbaru
-                    fetchBerita(token)
+                    fetchBerita()
                     onResult(true, "Berita berhasil diperbarui!")
                 } else {
                     onResult(false, "Gagal memperbarui berita: ${response.message()}")
@@ -102,9 +107,6 @@ class BeritaViewModel : ViewModel() {
         })
     }
 
-    /**
-     * TAMBAHAN: Fungsi untuk menghapus berita dari Database.
-     */
     fun deleteBerita(
         token: String,
         id: String,
@@ -115,7 +117,7 @@ class BeritaViewModel : ViewModel() {
             override fun onResponse(call: Call<EdukasiResponse>, response: Response<EdukasiResponse>) {
                 _isLoading.value = false
                 if (response.isSuccessful) {
-                    fetchBerita(token)
+                    fetchBerita()
                     onResult(true, "Berita berhasil dihapus!")
                 } else {
                     onResult(false, "Gagal menghapus berita")

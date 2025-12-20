@@ -122,10 +122,9 @@ interface ApiService {
         @Body request: EdukasiRequest
     ): Call<EdukasiResponse>
 
+    // PERBAIKAN: Header Authorization dihilangkan agar NewsScreen bisa tampil tanpa login (Public Access)
     @GET("api/edukasi")
-    fun getEdukasi(
-        @Header("Authorization") token: String
-    ): Call<ListEdukasiResponse>
+    fun getEdukasi(): Call<ListEdukasiResponse>
 
     // PERBAIKAN: Tambahkan rute PUT untuk melakukan update berita edukasi berdasarkan ID
     @PUT("api/edukasi/{id}")

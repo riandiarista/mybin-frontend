@@ -55,11 +55,10 @@ fun BeritaAndaScreen(navController: NavController, viewModel: BeritaViewModel) {
     val context = LocalContext.current
     val token = AuthTokenManager.getToken(context) ?: ""
 
-    // Memastikan data terbaru diambil saat layar dibuka
+    // PERBAIKAN: Memanggil fetchBerita() tanpa parameter token
+    // karena API GET edukasi sudah dibuat publik di backend dan ApiService.
     LaunchedEffect(Unit) {
-        if (token.isNotEmpty()) {
-            viewModel.fetchBerita(token)
-        }
+        viewModel.fetchBerita()
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -205,7 +204,7 @@ private fun BeritaCard(
                         Text(text = "Diterbitkan", color = statusTextColor, fontSize = 12.sp)
                     }
                     Row {
-                        // Fitur Hapus (Delete)
+                        // Fitur Hapus (Delete) tetap membutuhkan token karena endpoint DELETE diproteksi
                         TextButton(onClick = {
                             viewModel.deleteBerita(token, berita.id.toString()) { success, message ->
                                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
@@ -216,7 +215,6 @@ private fun BeritaCard(
 
                         // Fitur Edit
                         TextButton(onClick = {
-                            // Pastikan parameter beritaId sesuai dengan NavHost di MainActivity
                             navController.navigate("edit_berita_screen/${berita.id}")
                         }) {
                             Text("Edit", color = Color(0xFF4CAF50), fontWeight = FontWeight.Bold)
