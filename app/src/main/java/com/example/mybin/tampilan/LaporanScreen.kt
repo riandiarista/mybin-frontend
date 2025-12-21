@@ -1,5 +1,9 @@
 package com.example.mybin.tampilan
 
+import android.content.Context
+import android.graphics.Paint
+import android.graphics.pdf.PdfDocument
+import android.os.Environment
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -28,6 +32,11 @@ import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import com.example.mybin.model.SetoranData
 import com.example.mybin.viewmodel.SetoranViewModel
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
+import java.text.SimpleDateFormat
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -80,7 +89,6 @@ fun LaporanScreen(navController: NavController, viewModel: SetoranViewModel) {
                     Spacer(modifier = Modifier.height(16.dp))
                     TransactionHeader { showFilterDialog = true }
 
-                    // Indikator jika filter aktif
                     if (viewModel.filterStatus != "Semua" || viewModel.filterJenis != "Semua") {
                         Text(
                             text = "Filter: ${viewModel.filterStatus} | ${viewModel.filterJenis}",
@@ -92,7 +100,6 @@ fun LaporanScreen(navController: NavController, viewModel: SetoranViewModel) {
                     Spacer(modifier = Modifier.height(8.dp))
                 }
 
-                // PERUBAHAN: Menggunakan filteredLaporanList dari ViewModel
                 val listToDisplay = viewModel.filteredLaporanList
 
                 if (!viewModel.isLoading && listToDisplay.isEmpty()) {
@@ -114,7 +121,6 @@ fun LaporanScreen(navController: NavController, viewModel: SetoranViewModel) {
         }
     }
 
-    // PERUBAHAN: Memanggil Dialog Filter dengan Parameter State
     if (showFilterDialog) {
         FilterDialog(
             currentStatus = viewModel.filterStatus,
@@ -129,7 +135,99 @@ fun LaporanScreen(navController: NavController, viewModel: SetoranViewModel) {
     }
 
     if (showExportDialog) {
-        ExportDialog(onDismiss = { showExportDialog = false })
+        ExportDialog(
+            onDismiss = { showExportDialog = false },
+            viewModel = viewModel,
+            context = context
+        )
+    }
+}
+
+// --- FUNGSI EXPORT PDF ---
+fun exportLaporanToPdf(context: Context, laporanList: List<SetoranData>) {
+    val pdfDocument = PdfDocument()
+    val paint = Paint()
+    val titlePaint = Paint()
+
+    val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create()
+    val page = pdfDocument.startPage(pageInfo)
+    val canvas = page.canvas
+
+    titlePaint.textSize = 18f
+    titlePaint.isFakeBoldText = true
+    canvas.drawText("LAPORAN PENYETORAN - MyBin", 40f, 50f, titlePaint)
+
+    paint.textSize = 10f
+    val date = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
+    canvas.drawText("Dicetak pada: $date", 40f, 75f, paint)
+    canvas.drawLine(40f, 85f, 555f, 85f, paint)
+
+    var yPos = 110f
+    paint.isFakeBoldText = true
+    canvas.drawText("ID", 40f, yPos, paint)
+    canvas.drawText("Jenis Sampah", 100f, yPos, paint)
+    canvas.drawText("Status", 300f, yPos, paint)
+    canvas.drawText("Poin", 480f, yPos, paint)
+
+    paint.isFakeBoldText = false
+    yPos += 15f
+    canvas.drawLine(40f, yPos - 5f, 555f, yPos - 5f, paint)
+    yPos += 10f
+
+    laporanList.forEach { item ->
+        if (yPos < 800f) {
+            canvas.drawText("#${item.id}", 40f, yPos, paint)
+            canvas.drawText(item.jenis, 100f, yPos, paint)
+            canvas.drawText(item.status.uppercase(), 300f, yPos, paint)
+            canvas.drawText("${item.totalKoin}", 480f, yPos, paint)
+            yPos += 25f
+        }
+    }
+
+    pdfDocument.finishPage(page)
+
+    val directory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+    val file = File(directory, "Laporan_MyBin_${System.currentTimeMillis()}.pdf")
+
+    try {
+        pdfDocument.writeTo(FileOutputStream(file))
+        Toast.makeText(context, "PDF disimpan di folder Download", Toast.LENGTH_LONG).show()
+    } catch (e: IOException) {
+        Toast.makeText(context, "Gagal simpan PDF: ${e.message}", Toast.LENGTH_SHORT).show()
+    } finally {
+        pdfDocument.close()
+    }
+}
+
+@Composable
+fun ExportDialog(onDismiss: () -> Unit, viewModel: SetoranViewModel, context: Context) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text("Export Laporan", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text(
+                    "Unduh ${viewModel.filteredLaporanList.size} data riwayat saat ini ke dalam format PDF.",
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    fontSize = 14.sp
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = {
+                        exportLaporanToPdf(context, viewModel.filteredLaporanList)
+                        onDismiss()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2EBD70))
+                ) {
+                    Icon(Icons.Default.PictureAsPdf, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Download PDF")
+                }
+                TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
+                    Text("Batal", color = Color.Gray)
+                }
+            }
+        }
     }
 }
 
@@ -150,7 +248,6 @@ fun FilterDialog(
                 Text("Filter Riwayat", fontWeight = FontWeight.Bold, fontSize = 20.sp)
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Filter Berdasarkan Status
                 Text("Status", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("Semua", "Selesai", "Ditolak").forEach { status ->
@@ -165,7 +262,6 @@ fun FilterDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Filter Berdasarkan Jenis
                 Text("Jenis Sampah", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 Column {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -337,20 +433,5 @@ fun BottomNavItem(icon: ImageVector, label: String, isSelected: Boolean, onClick
     ) {
         Icon(icon, contentDescription = label, tint = color)
         Text(label, fontSize = 10.sp, color = color)
-    }
-}
-
-@Composable
-fun ExportDialog(onDismiss: () -> Unit) {
-    Dialog(onDismissRequest = onDismiss) {
-        Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-            Column(modifier = Modifier.padding(24.dp)) {
-                Text("Export Laporan", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                Text("Unduh riwayat penyetoran dalam format PDF.", modifier = Modifier.padding(vertical = 8.dp))
-                Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2EBD70))) {
-                    Text("Download")
-                }
-            }
-        }
     }
 }

@@ -95,7 +95,7 @@ fun ExchangeScreen(navController: NavController, viewModel: SetoranViewModel) {
                 elevation = CardDefaults.cardElevation(2.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Poin Tersedia (Galaloc Points):", fontSize = 14.sp, color = Color.Gray)
+                    Text("Poin Tersedia (MyBin Points):", fontSize = 14.sp, color = Color.Gray)
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Stars, contentDescription = "Points", tint = Color(0xFFFFC107), modifier = Modifier.size(28.dp))
