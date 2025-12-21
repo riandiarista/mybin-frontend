@@ -13,7 +13,6 @@ import com.example.mybin.model.SampahResponse
 import com.example.mybin.network.ApiClient
 import com.example.mybin.network.AuthTokenManager
 import com.example.mybin.network.ListSampahResponse
-import com.example.mybin.network.Sampah
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import retrofit2.Call
@@ -45,6 +44,9 @@ class SampahViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Menyimpan data sampah baru ke API.
+     */
     fun saveSampahToApi(
         jenis: String,
         berat: Float,
@@ -74,24 +76,24 @@ class SampahViewModel : ViewModel() {
             ).enqueue(object : Callback<SampahResponse> {
                 override fun onResponse(call: Call<SampahResponse>, response: Response<SampahResponse>) {
                     if (response.isSuccessful) {
-                        onSuccess("Data sampah berhasil disimpan ke database!")
+                        onSuccess("Data sampah berhasil disimpan!")
                     } else {
                         val errorBody = response.errorBody()?.string() ?: "Respons error tidak dikenal"
-                        onError("Gagal menyimpan data (Kode: ${response.code()}). Error: $errorBody")
+                        onError("Gagal menyimpan data (Kode: ${response.code()})")
                         Log.e("API_ERROR", "Response: $errorBody")
                     }
                 }
 
                 override fun onFailure(call: Call<SampahResponse>, t: Throwable) {
-                    onError("Gagal terhubung ke server. Pesan: ${t.message}")
-                    Log.e("API_FAIL", "Pesan: ${t.message}", t)
+                    onError("Gagal terhubung ke server: ${t.message}")
                 }
             })
         }
     }
 
     /**
-     * Fungsi untuk memuat data sampah milik user dari backend.
+     * Memuat data sampah dari backend.
+     * PERBAIKAN: Menggunakan operator elvis (?:) untuk menangani data nullable dari API.
      */
     fun loadSampah(
         onSuccess: (String) -> Unit,
@@ -105,51 +107,45 @@ class SampahViewModel : ViewModel() {
 
         isLoading = true
         viewModelScope.launch(Dispatchers.IO) {
-            ApiClient.instance.getSampah(
-                token = "Bearer $token"
-            ).enqueue(object : Callback<ListSampahResponse> {
+            ApiClient.instance.getSampah(token = "Bearer $token").enqueue(object : Callback<ListSampahResponse> {
                 override fun onResponse(call: Call<ListSampahResponse>, response: Response<ListSampahResponse>) {
                     isLoading = false
                     if (response.isSuccessful) {
                         val remoteSampahList = response.body()?.data ?: emptyList()
 
-                        // Kosongkan list lokal dan isi dengan data dari database
                         sampahList.clear()
                         remoteSampahList.forEach { sampah ->
-                            // Konversi model backend (Sampah) ke model frontend (SampahData)
+                            // PERBAIKAN: Map data nullable (String?, Int?, Float?) ke non-nullable (String, Int)
                             sampahList.add(
                                 SampahData(
-                                    id = sampah.id.toString(), // Gunakan ID dari database
-                                    jenisSampah = sampah.jenis,
+                                    id = sampah.id.toString(),
+                                    jenisSampah = sampah.jenis ?: "Tanpa Jenis",
                                     detailSampah = sampah.detail ?: "Tidak ada detail",
-                                    totalBobot = "${sampah.berat} Kg",
-                                    imageUri = null, // Perlu implementasi terpisah untuk Uri/Foto
-                                    estimasiKoin = sampah.coin
+                                    totalBobot = "${sampah.berat ?: 0f} Kg",
+                                    imageUri = null,
+                                    estimasiKoin = sampah.coin ?: 0
                                 )
                             )
                         }
-                        onSuccess("Berhasil memuat ${sampahList.size} data sampah dari database.")
+                        onSuccess("Berhasil memuat data.")
                     } else {
-                        val errorBody = response.errorBody()?.string() ?: "Respons error tidak dikenal"
-                        onError("Gagal memuat data (Kode: ${response.code()}). Error: $errorBody")
-                        Log.e("API_LOAD_ERROR", "Response: $errorBody")
+                        onError("Gagal memuat data (Kode: ${response.code()})")
                     }
                 }
 
                 override fun onFailure(call: Call<ListSampahResponse>, t: Throwable) {
                     isLoading = false
-                    onError("Gagal terhubung ke server: ${t.message}")
-                    Log.e("API_LOAD_FAIL", "Pesan: ${t.message}", t)
+                    onError("Koneksi gagal: ${t.message}")
                 }
             })
         }
     }
 
     /**
-     * Fungsi untuk memperbarui data sampah yang ada di backend.
+     * Memperbarui data sampah di backend.
      */
     fun updateSampahInApi(
-        id: String, // ID sampah yang akan diupdate
+        id: String,
         jenis: String,
         berat: Float,
         detail: String,
@@ -159,7 +155,7 @@ class SampahViewModel : ViewModel() {
     ) {
         val token = AuthTokenManager.authToken
         if (token.isNullOrEmpty()) {
-            onError("Token otentikasi tidak ditemukan. Silakan login ulang.")
+            onError("Token tidak ditemukan.")
             return
         }
 
@@ -168,48 +164,44 @@ class SampahViewModel : ViewModel() {
             berat = berat,
             detail = detail,
             coin = coin,
-            foto = null // Implementasi upload foto akan terpisah
+            foto = null
         )
 
         viewModelScope.launch(Dispatchers.IO) {
-            ApiClient.instance.updateSampah( // Panggil API Service Update
+            ApiClient.instance.updateSampah(
                 id = id,
                 token = "Bearer $token",
                 request = requestBody
             ).enqueue(object : Callback<SampahResponse> {
                 override fun onResponse(call: Call<SampahResponse>, response: Response<SampahResponse>) {
                     if (response.isSuccessful) {
-                        // Setelah berhasil update di backend, panggil loadSampah untuk refresh list di UI
                         loadSampah(
-                            onSuccess = { onSuccess("Data sampah ID $id berhasil diperbarui!") },
-                            onError = { error -> onError("Data sampah ID $id berhasil diperbarui, tetapi gagal me-refresh list: $error") }
+                            onSuccess = { onSuccess("Berhasil diperbarui!") },
+                            onError = { onError("Update sukses, tapi gagal refresh.") }
                         )
                     } else {
-                        val errorBody = response.errorBody()?.string() ?: "Respons error tidak dikenal"
-                        onError("Gagal memperbarui data (Kode: ${response.code()}). Error: $errorBody")
-                        Log.e("API_UPDATE_ERROR", "Response: $errorBody")
+                        onError("Gagal update (Kode: ${response.code()})")
                     }
                 }
 
                 override fun onFailure(call: Call<SampahResponse>, t: Throwable) {
-                    onError("Gagal terhubung ke server. Pesan: ${t.message}")
-                    Log.e("API_UPDATE_FAIL", "Pesan: ${t.message}", t)
+                    onError("Koneksi gagal: ${t.message}")
                 }
             })
         }
     }
 
     /**
-     * Fungsi baru untuk menghapus data sampah dari backend.
+     * Menghapus data sampah dari backend.
      */
     fun deleteSampahInApi(
-        id: String, // ID sampah yang akan dihapus
+        id: String,
         onSuccess: (String) -> Unit,
         onError: (String) -> Unit
     ) {
         val token = AuthTokenManager.authToken
         if (token.isNullOrEmpty()) {
-            onError("Token otentikasi tidak ditemukan. Silakan login ulang.")
+            onError("Token tidak ditemukan.")
             return
         }
 
@@ -220,21 +212,17 @@ class SampahViewModel : ViewModel() {
             ).enqueue(object : Callback<SampahResponse> {
                 override fun onResponse(call: Call<SampahResponse>, response: Response<SampahResponse>) {
                     if (response.isSuccessful) {
-                        // Refresh list setelah berhasil dihapus
                         loadSampah(
-                            onSuccess = { onSuccess(response.body()?.message ?: "Data sampah berhasil dihapus!") },
-                            onError = { error -> onError("Data sampah berhasil dihapus, tetapi gagal me-refresh list: $error") }
+                            onSuccess = { onSuccess("Data berhasil dihapus!") },
+                            onError = { onError("Hapus sukses, tapi gagal refresh.") }
                         )
                     } else {
-                        val errorBody = response.errorBody()?.string() ?: "Respons error tidak dikenal"
-                        onError("Gagal menghapus data (Kode: ${response.code()}). Error: $errorBody")
-                        Log.e("API_DELETE_ERROR", "Response: $errorBody")
+                        onError("Gagal hapus (Kode: ${response.code()})")
                     }
                 }
 
                 override fun onFailure(call: Call<SampahResponse>, t: Throwable) {
-                    onError("Gagal terhubung ke server. Pesan: ${t.message}")
-                    Log.e("API_DELETE_FAIL", "Pesan: ${t.message}", t)
+                    onError("Koneksi gagal: ${t.message}")
                 }
             })
         }

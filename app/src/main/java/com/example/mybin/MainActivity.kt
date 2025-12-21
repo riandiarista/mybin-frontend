@@ -93,7 +93,7 @@ class MainActivity : ComponentActivity() {
                         MainPage(navController)
                     }
                     composable("LaporanScreen") {
-                        LaporanScreen(navController)
+                        LaporanScreen(navController, setoranViewModel)
                     }
                     composable("DataSetoranScreen") {
                         DataSetoranScreen(navController, setoranViewModel)
