@@ -45,10 +45,12 @@ fun LaporanScreen(navController: NavController, viewModel: SetoranViewModel) {
     var showFilterDialog by remember { mutableStateOf(false) }
     var showExportDialog by remember { mutableStateOf(false) }
 
+    // SINKRONISASI REAL-TIME: Mengambil riwayat DAN saldo bersih terbaru dari tabel User
     LaunchedEffect(Unit) {
         viewModel.loadLaporanHistory { errorMessage ->
             Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
         }
+        viewModel.loadUserBalance() // Sinkronisasi saldo profil
     }
 
     Scaffold(
@@ -62,7 +64,7 @@ fun LaporanScreen(navController: NavController, viewModel: SetoranViewModel) {
                 },
                 actions = {
                     IconButton(onClick = { showExportDialog = true }) {
-                        Icon(Icons.Default.Download, contentDescription = "Unduh")
+                        Icon(Icons.Default.Download, contentDescription = "Unduh PDF")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
@@ -85,13 +87,15 @@ fun LaporanScreen(navController: NavController, viewModel: SetoranViewModel) {
                     .padding(horizontal = 16.dp)
             ) {
                 item {
+                    // Tampilkan saldo dari kolom total_poin_user di database
                     TotalPointsCard(points = viewModel.totalPoinUser)
                     Spacer(modifier = Modifier.height(16.dp))
+
                     TransactionHeader { showFilterDialog = true }
 
                     if (viewModel.filterStatus != "Semua" || viewModel.filterJenis != "Semua") {
                         Text(
-                            text = "Filter: ${viewModel.filterStatus} | ${viewModel.filterJenis}",
+                            text = "Filter aktif: ${viewModel.filterStatus} | ${viewModel.filterJenis}",
                             fontSize = 12.sp,
                             color = Color(0xFF2EBD70),
                             modifier = Modifier.padding(bottom = 8.dp)
@@ -117,10 +121,14 @@ fun LaporanScreen(navController: NavController, viewModel: SetoranViewModel) {
                     SetoranItemComponent(setoran)
                     Spacer(modifier = Modifier.height(12.dp))
                 }
+
+                // Beri ruang ekstra di bawah agar tidak tertutup Navbar
+                item { Spacer(modifier = Modifier.height(80.dp)) }
             }
         }
     }
 
+    // --- DIALOG FILTER ---
     if (showFilterDialog) {
         FilterDialog(
             currentStatus = viewModel.filterStatus,
@@ -134,6 +142,7 @@ fun LaporanScreen(navController: NavController, viewModel: SetoranViewModel) {
         )
     }
 
+    // --- DIALOG EXPORT ---
     if (showExportDialog) {
         ExportDialog(
             onDismiss = { showExportDialog = false },
@@ -143,7 +152,7 @@ fun LaporanScreen(navController: NavController, viewModel: SetoranViewModel) {
     }
 }
 
-// --- FUNGSI EXPORT PDF ---
+// --- FUNGSI EXPORT PDF (FULL STYLING) ---
 fun exportLaporanToPdf(context: Context, laporanList: List<SetoranData>) {
     val pdfDocument = PdfDocument()
     val paint = Paint()
@@ -155,7 +164,7 @@ fun exportLaporanToPdf(context: Context, laporanList: List<SetoranData>) {
 
     titlePaint.textSize = 18f
     titlePaint.isFakeBoldText = true
-    canvas.drawText("LAPORAN PENYETORAN - MyBin", 40f, 50f, titlePaint)
+    canvas.drawText("LAPORAN PENYETORAN", 40f, 50f, titlePaint)
 
     paint.textSize = 10f
     val date = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
@@ -362,17 +371,18 @@ fun TotalPointsCard(points: Int) {
         colors = CardDefaults.cardColors(containerColor = Color(0xFFD7F5E6))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("Total Runtah Points Saat Ini:", fontSize = 14.sp, color = Color.Gray)
+            Text("Total Bin Points:", fontSize = 14.sp, color = Color.Gray)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("🪙", fontSize = 28.sp)
+                Icon(Icons.Default.Stars, contentDescription = null, tint = Color(0xFFFFC107), modifier = Modifier.size(28.dp))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = String.format("%,d", points),
+                    text = String.format("%,d Poin", points),
                     fontSize = 32.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF2EBD70)
                 )
             }
-            Text("Poin terupdate otomatis setelah verifikasi.", fontSize = 12.sp, color = Color.Gray)
+            Text("Poin ini adalah saldo bersih yang sinkron dengan database.", fontSize = 12.sp, color = Color.Gray)
         }
     }
 }
@@ -380,7 +390,7 @@ fun TotalPointsCard(points: Int) {
 @Composable
 fun TransactionHeader(onFilterClick: () -> Unit) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        Text("Laporan Final", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Text("Laporan Riwayat", fontSize = 18.sp, fontWeight = FontWeight.Bold)
         TextButton(onClick = onFilterClick) {
             Icon(Icons.Default.FilterList, contentDescription = null, tint = Color(0xFF2EBD70))
             Text(" Filter", color = Color(0xFF2EBD70))

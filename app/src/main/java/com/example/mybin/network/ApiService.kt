@@ -2,6 +2,7 @@ package com.example.mybin.network
 
 import com.example.mybin.model.SampahRequest
 import com.example.mybin.model.SampahResponse
+import com.example.mybin.model.UserProfileResponse // Impor data class yang baru dibuat
 import retrofit2.Call
 import retrofit2.http.*
 
@@ -15,11 +16,9 @@ data class Sampah(
     val coin: Int?,
     val status: String?,
     val foto: String?,
-    // PERBAIKAN: Tambahkan field 'sampah' di sini agar bisa membaca objek nested dari Sequelize
     val sampah: SampahNestedDetail? = null
 )
 
-// Model khusus untuk menangkap objek 'sampah' di dalam response setoran
 data class SampahNestedDetail(
     val jenis: String?,
     val coin: Int?
@@ -41,6 +40,27 @@ data class SetoranResponse(
     val message: String,
     val total_data: Int?,
     val data: List<Sampah>?
+)
+
+// --- MODEL DATA EXCHANGE (PENUKARAN POIN) ---
+data class ExchangeRequest(
+    val amount_poin: Int,
+    val phone_number: String
+)
+
+data class ExchangeResponse(
+    val message: String,
+    val status: String,
+    val current_balance: Int?, // Menangkap saldo terbaru setelah dipotong di database
+    val data: ExchangeData?
+)
+
+data class ExchangeData(
+    val id: Int,
+    val amount_poin: Int,
+    val amount_rupiah: Int,
+    val phone_number: String,
+    val status: String
 )
 
 // --- MODEL DATA EDUKASI (BERITA) ---
@@ -74,13 +94,25 @@ data class ListEdukasiResponse(
 
 // --- MODEL AUTH & FCM ---
 data class LoginRequest(val username: String, val password: String)
-data class LoginResponse(val message: String, val token: String?)
+data class LoginResponse(
+    val message: String,
+    val token: String?,
+    val user: UserDataLogin? // Opsional: Tambahkan info user saat login
+)
+data class UserDataLogin(val id: Int, val username: String, val total_poin_user: Int)
 data class FCMRequest(val fcm_token: String)
 
 interface ApiService {
 
     @POST("api/login")
     fun login(@Body request: LoginRequest): Call<LoginResponse>
+
+    // --- PERUBAHAN: MODUL USER PROFILE (SINKRONISASI SALDO) ---
+    // Endpoint ini mengambil data langsung dari tabel users (kolom total_poin_user)
+    @GET("api/auth/me")
+    fun getUserProfile(
+        @Header("Authorization") token: String
+    ): Call<UserProfileResponse>
 
     @POST("api/auth/update-fcm")
     fun updateFCMToken(@Header("Authorization") token: String, @Body request: FCMRequest): Call<Void>
@@ -106,9 +138,15 @@ interface ApiService {
     fun getSetoran(@Header("Authorization") token: String): Call<SetoranResponse>
 
     // --- MODUL LAPORAN (HISTORY) ---
-    // Menggunakan ListSampahResponse agar konsisten dengan mapping di ViewModel
     @GET("api/laporan/history")
     fun getLaporanHistory(@Header("Authorization") token: String): Call<ListSampahResponse>
+
+    // --- MODUL EXCHANGE (REWARD) ---
+    @POST("api/exchange")
+    fun createExchange(
+        @Header("Authorization") token: String,
+        @Body request: ExchangeRequest
+    ): Call<ExchangeResponse>
 
     // --- MODUL EDUKASI ---
     @POST("api/edukasi")

@@ -7,6 +7,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Stars
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -16,7 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign // FIX: Import untuk TextAlign
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -27,20 +29,28 @@ import com.example.mybin.viewmodel.SetoranViewModel
 fun ExchangeScreen(navController: NavController, viewModel: SetoranViewModel) {
     val context = LocalContext.current
     var phoneNumber by remember { mutableStateOf("") }
+    var inputPoin by remember { mutableStateOf("") }
 
-    // Sinkronisasi poin saat layar dibuka agar data selalu terbaru
+    // State untuk Popup Laporan Exchange
+    var showResultDialog by remember { mutableStateOf(false) }
+    var resultMessage by remember { mutableStateOf("") }
+    var isSuccess by remember { mutableStateOf(false) }
+
+    // PERUBAHAN TAHAP 3: Sinkronisasi saldo langsung dari Tabel User (Profile)
+    // Kita tidak lagi memanggil loadLaporanHistory untuk menghitung koin secara manual
     LaunchedEffect(Unit) {
-        viewModel.loadLaporanHistory { error ->
-            Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
-        }
+        viewModel.loadUserBalance()
     }
 
-    val poinTersedia = viewModel.totalPoinUser
+    // Mengambil state saldo real-time dari ViewModel
+    val totalPoinTersedia = viewModel.totalPoinUser
+    val amountToExchange = inputPoin.toIntOrNull() ?: 0
     val minimalTukar = 1000
-    val isEligible = poinTersedia >= minimalTukar && phoneNumber.length >= 10
 
-    // Perhitungan konversi (Contoh: 1 Poin = Rp 1)
-    val estimasiSaldo = if (poinTersedia >= minimalTukar) poinTersedia else 0
+    // Validasi tombol: Nomor HP cukup, poin minimal terpenuhi, dan tidak melebihi saldo
+    val isEligible = phoneNumber.length >= 10 &&
+            amountToExchange >= minimalTukar &&
+            amountToExchange <= totalPoinTersedia
 
     Scaffold(
         topBar = {
@@ -58,25 +68,38 @@ fun ExchangeScreen(navController: NavController, viewModel: SetoranViewModel) {
             Button(
                 onClick = {
                     if (isEligible) {
-                        Toast.makeText(context, "Permintaan penukaran Rp $estimasiSaldo sedang diproses!", Toast.LENGTH_LONG).show()
+                        viewModel.submitExchange(
+                            amountPoin = amountToExchange,
+                            phoneNumber = phoneNumber,
+                            onSuccess = { message, newBalance ->
+                                // UI otomatis update karena totalPoinUser di ViewModel sudah diperbarui
+                                resultMessage = message
+                                isSuccess = true
+                                showResultDialog = true
+                            },
+                            onError = { error ->
+                                resultMessage = error
+                                isSuccess = false
+                                showResultDialog = true
+                            }
+                        )
                     }
                 },
-                enabled = isEligible,
+                enabled = isEligible && !viewModel.isLoading,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isEligible) Color(0xFF2EBD70) else Color.LightGray,
+                    containerColor = Color(0xFF2EBD70),
                     disabledContainerColor = Color.LightGray
                 ),
                 shape = RoundedCornerShape(16.dp)
             ) {
-                Text(
-                    text = "Tukar Poin Sekarang",
-                    color = if (isEligible) Color.White else Color.DarkGray,
-                    fontSize = 18.sp,
-                    modifier = Modifier.padding(8.dp)
-                )
+                if (viewModel.isLoading) {
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                } else {
+                    Text("Konfirmasi Penukaran", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                }
             }
         }
     ) { paddingValues ->
@@ -87,7 +110,7 @@ fun ExchangeScreen(navController: NavController, viewModel: SetoranViewModel) {
                 .background(Color.White)
                 .padding(16.dp)
         ) {
-            // Card Saldo Poin Real-time dari ViewModel
+            // Card Saldo Poin Real-time
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -95,87 +118,150 @@ fun ExchangeScreen(navController: NavController, viewModel: SetoranViewModel) {
                 elevation = CardDefaults.cardElevation(2.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Poin Tersedia (MyBin Points):", fontSize = 14.sp, color = Color.Gray)
+                    Text("Total Poin:", fontSize = 14.sp, color = Color.Gray)
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Stars, contentDescription = "Points", tint = Color(0xFFFFC107), modifier = Modifier.size(28.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = String.format("%,d Poin", poinTersedia),
+                            text = String.format("%,d Poin", totalPoinTersedia),
                             fontWeight = FontWeight.Bold,
                             fontSize = 28.sp,
                             color = Color.DarkGray
                         )
                     }
-                    Text(
-                        text = "Minimal penukaran: $minimalTukar Poin",
-                        fontSize = 12.sp,
-                        color = if (poinTersedia < minimalTukar) Color.Red else Color.Gray,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
                 }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Section Input Nomor HP
+            // Input Nomor HP
             Text("Nomor HP Akun GoPay", fontWeight = FontWeight.Bold, color = Color.DarkGray)
-            Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 value = phoneNumber,
-                onValueChange = { if (it.length <= 15) phoneNumber = it },
+                onValueChange = { phoneNumber = it },
                 placeholder = { Text("Contoh: 08123456789") },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                // FIX: Menggunakan API colors terbaru untuk OutlinedTextField
+                shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color(0xFF2EBD70),
-                    unfocusedBorderColor = Color.LightGray,
-                    focusedContainerColor = Color.White,
                     unfocusedContainerColor = Color(0xFFF5F5F5)
                 ),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
             )
-            Text("Pastikan nomor GoPay Anda sudah terdaftar dan aktif.", fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(top = 4.dp))
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Input Jumlah Poin yang akan ditukar
+            Text("Jumlah Poin yang Ditukar", fontWeight = FontWeight.Bold, color = Color.DarkGray)
+            OutlinedTextField(
+                value = inputPoin,
+                onValueChange = { inputPoin = it },
+                placeholder = { Text("Minimal 1.000") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                suffix = { Text("Poin") },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFF2EBD70),
+                    unfocusedContainerColor = Color(0xFFF5F5F5)
+                ),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+            )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Summary Penukaran
-            Text("Rincian Penukaran", fontWeight = FontWeight.Bold, color = Color.DarkGray)
-            Spacer(modifier = Modifier.height(8.dp))
+            // Rincian Konversi (Perayaan 1:1)
+            Text("Rincian Penukaran (1 Poin = Rp 1)", fontWeight = FontWeight.Bold, color = Color.DarkGray)
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFF9F9F9)),
-                elevation = CardDefaults.cardElevation(0.dp)
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFF9F9F9))
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Poin yang akan ditukar:", color = Color.Gray)
-                        Text("${if (poinTersedia >= minimalTukar) String.format("%,d", poinTersedia) else 0} Poin", fontWeight = FontWeight.Bold, color = Color.DarkGray)
-                    }
-                    HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Saldo GoPay Diterima:", color = Color.Gray)
+                        Text("Estimasi Rupiah:", color = Color.Gray)
                         Text(
-                            text = "Rp ${String.format("%,d", estimasiSaldo)}",
+                            text = "Rp ${String.format("%,d", amountToExchange)}",
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF2EBD70),
                             fontSize = 18.sp
                         )
                     }
+                    if (isSuccess) {
+                        Divider(color = Color.LightGray)
+                        Text(
+                            text = "Saldo setelah penukaran: Rp ${String.format("%,d", totalPoinTersedia - amountToExchange)}",
+                            fontSize = 12.sp,
+                            color = Color.Gray
+                        )
+                    }
                 }
             }
 
-            if (poinTersedia < minimalTukar) {
+            // Pesan Validasi
+            if (totalPoinTersedia < minimalTukar) {
                 Text(
-                    text = "Poin Anda belum cukup untuk melakukan penukaran.",
+                    text = "Poin Anda belum cukup (Min. 1.000)",
                     color = Color.Red,
                     fontSize = 12.sp,
-                    modifier = Modifier.padding(top = 16.dp).fillMaxWidth(),
+                    modifier = Modifier.padding(top = 12.dp).fillMaxWidth(),
+                    textAlign = TextAlign.Center
+                )
+            } else if (amountToExchange > totalPoinTersedia) {
+                Text(
+                    text = "Jumlah melebihi saldo poin Anda.",
+                    color = Color.Red,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 12.dp).fillMaxWidth(),
                     textAlign = TextAlign.Center
                 )
             }
         }
+    }
+
+    // --- POPUP LAPORAN EXCHANGE (DIALOG) ---
+    if (showResultDialog) {
+        AlertDialog(
+            onDismissRequest = { showResultDialog = false },
+            icon = {
+                Icon(
+                    imageVector = if (isSuccess) Icons.Default.CheckCircle else Icons.Default.Error,
+                    contentDescription = null,
+                    tint = if (isSuccess) Color(0xFF2EBD70) else Color.Red,
+                    modifier = Modifier.size(48.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = if (isSuccess) "Penukaran Berhasil" else "Penukaran Gagal",
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            text = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                    Text(resultMessage, textAlign = TextAlign.Center)
+                    if (isSuccess) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Poin Anda telah dipotong langsung dari tabel User.", fontSize = 12.sp, color = Color.Gray)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showResultDialog = false
+                        if (isSuccess) {
+                            // Saldo totalPoinUser sudah terupdate otomatis di ViewModel
+                            navController.popBackStack()
+                        }
+                    }
+                ) {
+                    Text("Tutup", fontWeight = FontWeight.Bold, color = Color(0xFF2EBD70))
+                }
+            },
+            shape = RoundedCornerShape(16.dp),
+            containerColor = Color.White
+        )
     }
 }

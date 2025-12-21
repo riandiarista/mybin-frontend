@@ -40,9 +40,11 @@ fun MainPage(navController: NavController, viewModel: SetoranViewModel) {
     var menuState by remember { mutableStateOf(MenuState.COLLAPSED) }
     val transition = updateTransition(targetState = menuState, label = "Menu Transition")
 
-    // PERUBAHAN: Memanggil data laporan saat MainPage dibuka agar poin terhitung otomatis
+    // SINKRONISASI OTOMATIS:
+    // Memanggil saldo langsung dari database saat halaman dibuka.
+    // Ini akan memastikan angka 27.000 muncul secara real-time.
     LaunchedEffect(Unit) {
-        viewModel.loadLaporanHistory { /* handle error jika perlu */ }
+        viewModel.loadUserBalance()
     }
 
     Scaffold(
@@ -132,7 +134,6 @@ fun MainPage(navController: NavController, viewModel: SetoranViewModel) {
             )
 
             Column {
-                // Top Greeting Card
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -161,7 +162,6 @@ fun MainPage(navController: NavController, viewModel: SetoranViewModel) {
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                // Main Content
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
@@ -172,20 +172,25 @@ fun MainPage(navController: NavController, viewModel: SetoranViewModel) {
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text("Selection", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = greenColor)
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                        // PERUBAHAN: Menampilkan Poin Asli dari ViewModel
+                        // TAMPILAN POIN BERSIH
+                        // Mengambil nilai totalPoinUser dari ViewModel yang sudah di-sinkronkan
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Star, contentDescription = "Bin Points", tint = Color(0xFFFFC107))
-                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(Icons.Default.Star, contentDescription = "Bin Points", tint = Color(0xFFFFC107), modifier = Modifier.size(24.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "${viewModel.totalPoinUser} Bin Points",
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 20.sp,
+                                color = Color.DarkGray
                             )
                         }
+
+                        // TOMBOL REFRESH DIHAPUS UNTUK ESTETIKA YANG LEBIH BERSIH
+
                         Spacer(modifier = Modifier.height(24.dp))
 
-                        // Grid of selections
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
                             SelectionItem(icon = Icons.Default.Refresh, label = "Recycle", onClick = { navController.navigate("RecycleScreen") })
                             SelectionItem(icon = Icons.Default.Savings, label = "Deposit", onClick = { navController.navigate("DataSetoranScreen") })

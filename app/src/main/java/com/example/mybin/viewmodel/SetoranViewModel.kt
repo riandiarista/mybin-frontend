@@ -8,8 +8,11 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mybin.model.SetoranData
+import com.example.mybin.model.UserProfileResponse // Pastikan ini diimpor
 import com.example.mybin.network.ApiClient
 import com.example.mybin.network.AuthTokenManager
+import com.example.mybin.network.ExchangeRequest
+import com.example.mybin.network.ExchangeResponse
 import com.example.mybin.network.ListSampahResponse
 import com.example.mybin.network.SetoranRequest
 import com.example.mybin.network.SetoranResponse
@@ -26,12 +29,11 @@ class SetoranViewModel : ViewModel() {
     private val _laporanList = mutableStateListOf<SetoranData>()
     val laporanList: List<SetoranData> get() = _laporanList
 
-    // --- STATE FILTER (BARU) ---
+    // --- STATE FILTER ---
     var filterStatus by mutableStateOf("Semua")
     var filterJenis by mutableStateOf("Semua")
 
     // --- LOGIKA FILTER DINAMIS ---
-    // Properti ini akan dipanggil oleh UI (LaporanScreen) untuk menampilkan data hasil filter
     val filteredLaporanList: List<SetoranData>
         get() {
             return _laporanList.filter { item ->
@@ -45,7 +47,8 @@ class SetoranViewModel : ViewModel() {
             }
         }
 
-    // --- STATE POIN OTOMATIS ---
+    //
+    // Sekarang mengambil data langsung dari kolom total_poin_user di tabel User
     var totalPoinUser by mutableStateOf(0)
         private set
 
@@ -56,13 +59,37 @@ class SetoranViewModel : ViewModel() {
     }
 
     /**
-     * Memuat riwayat laporan dan menghitung akumulasi poin secara otomatis
-     * berdasarkan setoran yang berstatus 'selesai'.
+     * TAHAP 3: FUNGSI BARU - Load Saldo Langsung dari Profil User
+     * Dipanggil saat aplikasi dibuka atau refresh saldo.
+     */
+    fun loadUserBalance() {
+        val token = AuthTokenManager.authToken
+        if (token.isNullOrEmpty()) return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            ApiClient.instance.getUserProfile("Bearer $token").enqueue(object : Callback<UserProfileResponse> {
+                override fun onResponse(call: Call<UserProfileResponse>, response: Response<UserProfileResponse>) {
+                    if (response.isSuccessful) {
+                        // SINKRONISASI: Ambil saldo bersih dari database (Total Selesai - Total Tukar)
+                        val saldoBersih = response.body()?.data?.totalPoinUser ?: 0
+                        totalPoinUser = saldoBersih
+                        Log.d("MyBin_Balance", "Saldo: $totalPoinUser")
+                    }
+                }
+                override fun onFailure(call: Call<UserProfileResponse>, t: Throwable) {
+                    Log.e("ERROR", "Gagal load profile saldo: ${t.message}")
+                }
+            })
+        }
+    }
+
+    /**
+     * Memuat riwayat laporan (Hanya untuk daftar riwayat, tidak untuk hitung saldo lagi)
      */
     fun loadLaporanHistory(onError: (String) -> Unit) {
         val token = AuthTokenManager.authToken
         if (token.isNullOrEmpty()) {
-            onError("Sesi berakhir. Silakan login kembali.")
+            onError("Sesi berakhir.")
             return
         }
 
@@ -73,18 +100,12 @@ class SetoranViewModel : ViewModel() {
                     isLoading = false
                     if (response.isSuccessful) {
                         val remoteData = response.body()?.data ?: emptyList()
-
                         _laporanList.clear()
-                        var accumulatedPoin = 0
 
                         remoteData.forEach { item ->
                             val detailSampah = item.sampah
-                            val statusStr = item.status ?: "selesai"
+                            val statusStr = item.status ?: "pending"
                             val koin = detailSampah?.coin ?: item.coin ?: 0
-
-                            if (statusStr.lowercase() == "selesai") {
-                                accumulatedPoin += koin
-                            }
 
                             _laporanList.add(
                                 SetoranData(
@@ -98,24 +119,70 @@ class SetoranViewModel : ViewModel() {
                             )
                         }
 
-                        totalPoinUser = accumulatedPoin
-                        Log.d("API_LAPORAN_SUCCESS", "Data dimuat. Total Poin: $totalPoinUser")
+                        // Setelah load history, sinkronkan juga saldo utama
+                        loadUserBalance()
                     } else {
-                        val errorBody = response.errorBody()?.string() ?: "Gagal memuat laporan"
-                        onError("Gagal memuat laporan (Kode: ${response.code()})")
-                        Log.e("API_LAPORAN_ERROR", "Response: $errorBody")
+                        onError("Gagal memuat riwayat")
                     }
                 }
 
                 override fun onFailure(call: Call<ListSampahResponse>, t: Throwable) {
                     isLoading = false
-                    onError("Gagal terhubung ke server: ${t.message}")
-                    Log.e("API_LAPORAN_FAIL", "Pesan: ${t.message}", t)
+                    onError("Koneksi gagal")
                 }
             })
         }
     }
 
+    /**
+     * FITUR PENUKARAN POIN (EXCHANGE) - VERSI REAL-TIME
+     */
+    fun submitExchange(
+        amountPoin: Int,
+        phoneNumber: String,
+        onSuccess: (String, Int) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        val token = AuthTokenManager.authToken
+        if (token.isNullOrEmpty()) {
+            onError("Sesi berakhir.")
+            return
+        }
+
+        isLoading = true
+        val request = ExchangeRequest(amount_poin = amountPoin, phone_number = phoneNumber)
+
+        viewModelScope.launch(Dispatchers.IO) {
+            ApiClient.instance.createExchange("Bearer $token", request).enqueue(object : Callback<ExchangeResponse> {
+                override fun onResponse(call: Call<ExchangeResponse>, response: Response<ExchangeResponse>) {
+                    isLoading = false
+                    if (response.isSuccessful) {
+                        val resBody = response.body()
+
+                        // UPDATE UI LANGSUNG: Backend mengirim current_balance yang sudah dipotong
+                        val saldoTerbaru = resBody?.current_balance ?: (totalPoinUser - amountPoin)
+
+                        // State ini akan membuat angka di layar Selection & Exchange berubah seketika
+                        totalPoinUser = saldoTerbaru
+
+                        onSuccess(resBody?.message ?: "Penukaran berhasil!", totalPoinUser)
+                    } else {
+                        val errorBody = response.errorBody()?.string() ?: "Saldo tidak cukup"
+                        onError(errorBody)
+                    }
+                }
+
+                override fun onFailure(call: Call<ExchangeResponse>, t: Throwable) {
+                    isLoading = false
+                    onError("Koneksi gagal: ${t.message}")
+                }
+            })
+        }
+    }
+
+    /**
+     * FITUR SUBMIT SETORAN
+     */
     fun submitSetoran(
         sampahIds: String,
         totalKoin: Int,
@@ -125,35 +192,26 @@ class SetoranViewModel : ViewModel() {
     ) {
         val token = AuthTokenManager.authToken
         if (token.isNullOrEmpty()) {
-            onError("Sesi berakhir. Silakan login kembali.")
+            onError("Sesi berakhir.")
             return
         }
 
-        val request = SetoranRequest(
-            sampahIds = sampahIds,
-            totalKoin = totalKoin,
-            lokasi = lokasi
-        )
+        val request = SetoranRequest(sampahIds = sampahIds, totalKoin = totalKoin, lokasi = lokasi)
 
         viewModelScope.launch(Dispatchers.IO) {
-            ApiClient.instance.createSetoran(
-                token = "Bearer $token",
-                request = request
-            ).enqueue(object : Callback<SetoranResponse> {
+            ApiClient.instance.createSetoran("Bearer $token", request).enqueue(object : Callback<SetoranResponse> {
                 override fun onResponse(call: Call<SetoranResponse>, response: Response<SetoranResponse>) {
                     if (response.isSuccessful) {
-                        onSuccess(response.body()?.message ?: "Setoran berhasil diproses!")
-                        loadLaporanHistory { }
+                        onSuccess(response.body()?.message ?: "Setoran berhasil!")
+                        // Saat setoran dibuat, saldo belum bertambah karena status masih 'menunggu'.
+                        // Saldo baru bertambah di tabel user setelah Admin mengubah status menjadi 'selesai'.
                     } else {
-                        val errorMsg = response.errorBody()?.string() ?: "Gagal memproses data"
-                        onError("Error ${response.code()}: $errorMsg")
-                        Log.e("API_SETORAN_ERROR", errorMsg)
+                        onError("Gagal memproses setoran")
                     }
                 }
 
                 override fun onFailure(call: Call<SetoranResponse>, t: Throwable) {
-                    onError("Gagal terhubung ke server: ${t.message}")
-                    Log.e("API_SETORAN_FAIL", t.message ?: "Unknown failure")
+                    onError("Gagal terhubung ke server")
                 }
             })
         }
