@@ -8,7 +8,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mybin.model.SetoranData
-import com.example.mybin.model.UserProfileResponse // Pastikan ini diimpor
+import com.example.mybin.model.UserProfileResponse
 import com.example.mybin.network.ApiClient
 import com.example.mybin.network.AuthTokenManager
 import com.example.mybin.network.ExchangeRequest
@@ -17,6 +17,8 @@ import com.example.mybin.network.ListSampahResponse
 import com.example.mybin.network.SetoranRequest
 import com.example.mybin.network.SetoranResponse
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import retrofit2.Call
 import retrofit2.Callback
@@ -28,6 +30,10 @@ class SetoranViewModel : ViewModel() {
 
     private val _laporanList = mutableStateListOf<SetoranData>()
     val laporanList: List<SetoranData> get() = _laporanList
+
+    // State untuk menampung response mentah dari API Setoran
+    private val _setoranResponse = MutableStateFlow<SetoranResponse?>(null)
+    val setoranResponse: StateFlow<SetoranResponse?> = _setoranResponse
 
     // --- STATE FILTER ---
     var filterStatus by mutableStateOf("Semua")
@@ -47,8 +53,6 @@ class SetoranViewModel : ViewModel() {
             }
         }
 
-    //
-    // Sekarang mengambil data langsung dari kolom total_poin_user di tabel User
     var totalPoinUser by mutableStateOf(0)
         private set
 
@@ -59,9 +63,48 @@ class SetoranViewModel : ViewModel() {
     }
 
     /**
-     * TAHAP 3: FUNGSI BARU - Load Saldo Langsung dari Profil User
-     * Dipanggil saat aplikasi dibuka atau refresh saldo.
+     * FUNGSI BARU: Mengambil data sampah yang baru saja disetor dari Backend
+     * Digunakan oleh DataSetoranScreen.kt untuk menampilkan data real-time.
      */
+    fun getSetoran() {
+        val token = AuthTokenManager.authToken
+        if (token.isNullOrEmpty()) return
+
+        isLoading = true
+        viewModelScope.launch(Dispatchers.IO) {
+            ApiClient.instance.getSetoran("Bearer $token").enqueue(object : Callback<SetoranResponse> {
+                override fun onResponse(call: Call<SetoranResponse>, response: Response<SetoranResponse>) {
+                    isLoading = false
+                    if (response.isSuccessful) {
+                        _setoranResponse.value = response.body()
+                        val remoteData = response.body()?.data ?: emptyList()
+
+                        // Sinkronisasi ke list lokal untuk UI
+                        _setoranList.clear()
+                        remoteData.forEach { item ->
+                            _setoranList.add(
+                                SetoranData(
+                                    id = item.id.toString(),
+                                    tanggal = "Sedang Proses",
+                                    jenis = item.sampah?.jenis ?: "Sampah Campuran",
+                                    lokasi = "Lokasi Penjemputan",
+                                    status = item.status ?: "menunggu",
+                                    totalKoin = item.sampah?.coin ?: 0
+                                )
+                            )
+                        }
+                        Log.d("MyBin_Setoran", "Berhasil sinkronisasi data setoran")
+                    }
+                }
+
+                override fun onFailure(call: Call<SetoranResponse>, t: Throwable) {
+                    isLoading = false
+                    Log.e("ERROR", "Gagal load data setoran: ${t.message}")
+                }
+            })
+        }
+    }
+
     fun loadUserBalance() {
         val token = AuthTokenManager.authToken
         if (token.isNullOrEmpty()) return
@@ -70,10 +113,8 @@ class SetoranViewModel : ViewModel() {
             ApiClient.instance.getUserProfile("Bearer $token").enqueue(object : Callback<UserProfileResponse> {
                 override fun onResponse(call: Call<UserProfileResponse>, response: Response<UserProfileResponse>) {
                     if (response.isSuccessful) {
-                        // SINKRONISASI: Ambil saldo bersih dari database (Total Selesai - Total Tukar)
                         val saldoBersih = response.body()?.data?.totalPoinUser ?: 0
                         totalPoinUser = saldoBersih
-                        Log.d("MyBin_Balance", "Saldo: $totalPoinUser")
                     }
                 }
                 override fun onFailure(call: Call<UserProfileResponse>, t: Throwable) {
@@ -83,9 +124,6 @@ class SetoranViewModel : ViewModel() {
         }
     }
 
-    /**
-     * Memuat riwayat laporan (Hanya untuk daftar riwayat, tidak untuk hitung saldo lagi)
-     */
     fun loadLaporanHistory(onError: (String) -> Unit) {
         val token = AuthTokenManager.authToken
         if (token.isNullOrEmpty()) {
@@ -118,8 +156,6 @@ class SetoranViewModel : ViewModel() {
                                 )
                             )
                         }
-
-                        // Setelah load history, sinkronkan juga saldo utama
                         loadUserBalance()
                     } else {
                         onError("Gagal memuat riwayat")
@@ -134,9 +170,6 @@ class SetoranViewModel : ViewModel() {
         }
     }
 
-    /**
-     * FITUR PENUKARAN POIN (EXCHANGE) - VERSI REAL-TIME
-     */
     fun submitExchange(
         amountPoin: Int,
         phoneNumber: String,
@@ -158,13 +191,8 @@ class SetoranViewModel : ViewModel() {
                     isLoading = false
                     if (response.isSuccessful) {
                         val resBody = response.body()
-
-                        // UPDATE UI LANGSUNG: Backend mengirim current_balance yang sudah dipotong
                         val saldoTerbaru = resBody?.current_balance ?: (totalPoinUser - amountPoin)
-
-                        // State ini akan membuat angka di layar Selection & Exchange berubah seketika
                         totalPoinUser = saldoTerbaru
-
                         onSuccess(resBody?.message ?: "Penukaran berhasil!", totalPoinUser)
                     } else {
                         val errorBody = response.errorBody()?.string() ?: "Saldo tidak cukup"
@@ -180,9 +208,6 @@ class SetoranViewModel : ViewModel() {
         }
     }
 
-    /**
-     * FITUR SUBMIT SETORAN
-     */
     fun submitSetoran(
         sampahIds: String,
         totalKoin: Int,
@@ -203,8 +228,8 @@ class SetoranViewModel : ViewModel() {
                 override fun onResponse(call: Call<SetoranResponse>, response: Response<SetoranResponse>) {
                     if (response.isSuccessful) {
                         onSuccess(response.body()?.message ?: "Setoran berhasil!")
-                        // Saat setoran dibuat, saldo belum bertambah karena status masih 'menunggu'.
-                        // Saldo baru bertambah di tabel user setelah Admin mengubah status menjadi 'selesai'.
+                        // Setelah sukses submit, panggil getSetoran untuk refresh list otomatis
+                        getSetoran()
                     } else {
                         onError("Gagal memproses setoran")
                     }

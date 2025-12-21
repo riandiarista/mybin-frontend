@@ -11,6 +11,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -29,6 +30,13 @@ import com.example.mybin.viewmodel.SetoranViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DataSetoranScreen(navController: NavController, setoranViewModel: SetoranViewModel = viewModel()) {
+
+    // --- LANGKAH 1: Trigger pengambilan data dari backend saat layar dibuka ---
+    LaunchedEffect(Unit) {
+        setoranViewModel.getSetoran()
+    }
+
+    // Mengambil list data yang sudah di-mapping oleh ViewModel dari API
     val setoranList = setoranViewModel.setoranList
 
     Scaffold(
@@ -41,7 +49,11 @@ fun DataSetoranScreen(navController: NavController, setoranViewModel: SetoranVie
                     }
                 },
                 actions = {
-                    IconButton(onClick = { /*TODO*/ }) {
+                    // Tombol Refresh manual untuk cek update status dari Admin
+                    IconButton(onClick = { setoranViewModel.getSetoran() }) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                    }
+                    IconButton(onClick = { /* Fitur Unduh */ }) {
                         Icon(Icons.Default.Download, contentDescription = "Unduh")
                     }
                 },
@@ -61,7 +73,16 @@ fun DataSetoranScreen(navController: NavController, setoranViewModel: SetoranVie
                 Spacer(modifier = Modifier.height(16.dp))
                 DataStatusHeader()
                 Spacer(modifier = Modifier.height(8.dp))
+
+                // Jika list kosong setelah fetch, tampilkan keterangan
+                if (setoranList.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                        Text("Belum ada sampah yang disetor", color = Color.Gray, fontSize = 14.sp)
+                    }
+                }
             }
+
+            // --- LANGKAH 2: Render UI menggunakan data asli dari database ---
             items(setoranList) { setoran ->
                 SetoranItem(setoran = setoran)
                 Spacer(modifier = Modifier.height(12.dp))
@@ -102,7 +123,7 @@ fun DataStatusHeader() {
     ) {
         Text("Data & Status", fontSize = 18.sp, fontWeight = FontWeight.Bold)
         OutlinedButton(
-            onClick = { /*TODO*/ },
+            onClick = { /* Filter */ },
             border = BorderStroke(1.dp, Color.LightGray),
             shape = RoundedCornerShape(12.dp)
         ) {
@@ -115,9 +136,12 @@ fun DataStatusHeader() {
 
 @Composable
 fun SetoranItem(setoran: SetoranData) {
-    val barColor = if (setoran.status == "Diproses") Color(0xFFF0AD4E) else Color(0xFF2EBD70)
-    val chipColor = if (setoran.status == "Diproses") Color(0xFFFFFBE6) else Color(0xFFD7F5E6)
-    val chipContentColor = if (setoran.status == "Diproses") Color(0xFFF0AD4E) else Color(0xFF2EBD70)
+    // Sinkronisasi warna dengan status backend: 'menunggu' (Orange) atau 'selesai' (Hijau)
+    val isPending = setoran.status.contains("menunggu", ignoreCase = true) || setoran.status.contains("Diproses", ignoreCase = true)
+
+    val barColor = if (isPending) Color(0xFFF0AD4E) else Color(0xFF2EBD70)
+    val chipColor = if (isPending) Color(0xFFFFFBE6) else Color(0xFFD7F5E6)
+    val chipContentColor = if (isPending) Color(0xFFF0AD4E) else Color(0xFF2EBD70)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -145,7 +169,7 @@ fun SetoranItem(setoran: SetoranData) {
                     Text(setoran.lokasi, fontSize = 14.sp, color = Color.Gray)
                 }
                 Spacer(modifier = Modifier.height(4.dp))
-                 Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.MonetizationOn, contentDescription = "Koin", tint = Color(0xFFFFC107), modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("${setoran.totalKoin} Poin", fontSize = 14.sp, color = Color(0xFF1B5E20), fontWeight = FontWeight.SemiBold)
@@ -154,27 +178,19 @@ fun SetoranItem(setoran: SetoranData) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Card(shape = RoundedCornerShape(8.dp), colors = CardDefaults.cardColors(containerColor = chipColor)) {
-                            Text(setoran.status, color = chipContentColor, modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp), fontSize = 12.sp)
+                            // Status diambil langsung dari kolom 'status' di database backend
+                            Text(setoran.status.uppercase(), color = chipContentColor, modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Hapus", color = Color.Red, fontSize = 12.sp)
                     }
-                    if (setoran.status == "Diproses") {
+                    if (isPending) {
                         Text("Status +", color = Color.Blue, fontSize = 12.sp)
-                    }
-                    else {
+                    } else {
                         Text("Lihat Detail", color = Color.Gray, fontSize = 12.sp)
                     }
                 }
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun DataSetoranScreenPreview() {
-    MyBinTheme {
-        DataSetoranScreen(rememberNavController())
     }
 }
