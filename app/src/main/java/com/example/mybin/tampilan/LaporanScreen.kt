@@ -36,7 +36,6 @@ fun LaporanScreen(navController: NavController, viewModel: SetoranViewModel) {
     var showFilterDialog by remember { mutableStateOf(false) }
     var showExportDialog by remember { mutableStateOf(false) }
 
-    // Memanggil data riwayat agar poin terhitung otomatis di ViewModel
     LaunchedEffect(Unit) {
         viewModel.loadLaporanHistory { errorMessage ->
             Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
@@ -77,17 +76,29 @@ fun LaporanScreen(navController: NavController, viewModel: SetoranViewModel) {
                     .padding(horizontal = 16.dp)
             ) {
                 item {
-                    // PERBAIKAN: Mengirimkan total poin asli dari ViewModel
                     TotalPointsCard(points = viewModel.totalPoinUser)
                     Spacer(modifier = Modifier.height(16.dp))
                     TransactionHeader { showFilterDialog = true }
+
+                    // Indikator jika filter aktif
+                    if (viewModel.filterStatus != "Semua" || viewModel.filterJenis != "Semua") {
+                        Text(
+                            text = "Filter: ${viewModel.filterStatus} | ${viewModel.filterJenis}",
+                            fontSize = 12.sp,
+                            color = Color(0xFF2EBD70),
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
                     Spacer(modifier = Modifier.height(8.dp))
                 }
 
-                if (!viewModel.isLoading && viewModel.laporanList.isEmpty()) {
+                // PERUBAHAN: Menggunakan filteredLaporanList dari ViewModel
+                val listToDisplay = viewModel.filteredLaporanList
+
+                if (!viewModel.isLoading && listToDisplay.isEmpty()) {
                     item {
                         Text(
-                            text = "Belum ada riwayat laporan (Selesai/Ditolak).",
+                            text = "Tidak ada riwayat yang sesuai dengan filter.",
                             modifier = Modifier.fillMaxWidth().padding(top = 40.dp),
                             textAlign = TextAlign.Center,
                             color = Color.Gray
@@ -95,7 +106,7 @@ fun LaporanScreen(navController: NavController, viewModel: SetoranViewModel) {
                     }
                 }
 
-                items(viewModel.laporanList) { setoran ->
+                items(listToDisplay) { setoran ->
                     SetoranItemComponent(setoran)
                     Spacer(modifier = Modifier.height(12.dp))
                 }
@@ -103,12 +114,97 @@ fun LaporanScreen(navController: NavController, viewModel: SetoranViewModel) {
         }
     }
 
+    // PERUBAHAN: Memanggil Dialog Filter dengan Parameter State
     if (showFilterDialog) {
-        FilterDialog(onDismiss = { showFilterDialog = false })
+        FilterDialog(
+            currentStatus = viewModel.filterStatus,
+            currentJenis = viewModel.filterJenis,
+            onFilterApplied = { status, jenis ->
+                viewModel.filterStatus = status
+                viewModel.filterJenis = jenis
+                showFilterDialog = false
+            },
+            onDismiss = { showFilterDialog = false }
+        )
     }
 
     if (showExportDialog) {
         ExportDialog(onDismiss = { showExportDialog = false })
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FilterDialog(
+    currentStatus: String,
+    currentJenis: String,
+    onFilterApplied: (String, String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var tempStatus by remember { mutableStateOf(currentStatus) }
+    var tempJenis by remember { mutableStateOf(currentJenis) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text("Filter Riwayat", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Filter Berdasarkan Status
+                Text("Status", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("Semua", "Selesai", "Ditolak").forEach { status ->
+                        FilterChip(
+                            selected = tempStatus == status,
+                            onClick = { tempStatus = status },
+                            label = { Text(status) },
+                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = Color(0xFFD7F5E6))
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Filter Berdasarkan Jenis
+                Text("Jenis Sampah", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Column {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("Semua", "Organik").forEach { jenis ->
+                            FilterChip(
+                                selected = tempJenis == jenis,
+                                onClick = { tempJenis = jenis },
+                                label = { Text(jenis) },
+                                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = Color(0xFFD7F5E6))
+                            )
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("Anorganik", "B3").forEach { jenis ->
+                            FilterChip(
+                                selected = tempJenis == jenis,
+                                onClick = { tempJenis = jenis },
+                                label = { Text(jenis) },
+                                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = Color(0xFFD7F5E6))
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Button(
+                    onClick = { onFilterApplied(tempStatus, tempJenis) },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2EBD70))
+                ) {
+                    Text("Terapkan Filter")
+                }
+
+                TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
+                    Text("Batal", color = Color.Gray)
+                }
+            }
+        }
     }
 }
 
@@ -162,10 +258,8 @@ fun SetoranItemComponent(setoran: SetoranData) {
     }
 }
 
-// --- KOMPONEN UI PENDUKUNG ---
-
 @Composable
-fun TotalPointsCard(points: Int) { // PERBAIKAN: Parameter points ditambahkan
+fun TotalPointsCard(points: Int) {
     Card(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
         shape = RoundedCornerShape(16.dp),
@@ -176,7 +270,6 @@ fun TotalPointsCard(points: Int) { // PERBAIKAN: Parameter points ditambahkan
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("🪙", fontSize = 28.sp)
                 Spacer(modifier = Modifier.width(8.dp))
-                // PERBAIKAN: Menampilkan poin dinamis dengan format ribuan
                 Text(
                     text = String.format("%,d", points),
                     fontSize = 32.sp,
@@ -198,8 +291,6 @@ fun TransactionHeader(onFilterClick: () -> Unit) {
         }
     }
 }
-
-// --- BOTTOM NAVIGATION COMPONENTS ---
 
 @Composable
 fun MyBinBottomNavBar(navController: NavController, activeScreen: String) {
@@ -246,24 +337,6 @@ fun BottomNavItem(icon: ImageVector, label: String, isSelected: Boolean, onClick
     ) {
         Icon(icon, contentDescription = label, tint = color)
         Text(label, fontSize = 10.sp, color = color)
-    }
-}
-
-// --- DIALOGS ---
-
-@Composable
-fun FilterDialog(onDismiss: () -> Unit) {
-    Dialog(onDismissRequest = onDismiss) {
-        Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-            Column(modifier = Modifier.padding(24.dp)) {
-                Text("Filter Status", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Fitur filter segera hadir di Galaloc.std", color = Color.Gray)
-                Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth().padding(top = 16.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2EBD70))) {
-                    Text("Tutup")
-                }
-            }
-        }
     }
 }
 

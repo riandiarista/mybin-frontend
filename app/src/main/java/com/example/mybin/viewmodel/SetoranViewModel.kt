@@ -26,8 +26,26 @@ class SetoranViewModel : ViewModel() {
     private val _laporanList = mutableStateListOf<SetoranData>()
     val laporanList: List<SetoranData> get() = _laporanList
 
+    // --- STATE FILTER (BARU) ---
+    var filterStatus by mutableStateOf("Semua")
+    var filterJenis by mutableStateOf("Semua")
+
+    // --- LOGIKA FILTER DINAMIS ---
+    // Properti ini akan dipanggil oleh UI (LaporanScreen) untuk menampilkan data hasil filter
+    val filteredLaporanList: List<SetoranData>
+        get() {
+            return _laporanList.filter { item ->
+                val matchesStatus = if (filterStatus == "Semua") true
+                else item.status.equals(filterStatus, ignoreCase = true)
+
+                val matchesJenis = if (filterJenis == "Semua") true
+                else item.jenis.equals(filterJenis, ignoreCase = true)
+
+                matchesStatus && matchesJenis
+            }
+        }
+
     // --- STATE POIN OTOMATIS ---
-    // State ini akan dipantau oleh MainMenu, LaporanScreen, dan ExchangeScreen
     var totalPoinUser by mutableStateOf(0)
         private set
 
@@ -57,14 +75,13 @@ class SetoranViewModel : ViewModel() {
                         val remoteData = response.body()?.data ?: emptyList()
 
                         _laporanList.clear()
-                        var accumulatedPoin = 0 // Variabel penampung hitungan poin
+                        var accumulatedPoin = 0
 
                         remoteData.forEach { item ->
                             val detailSampah = item.sampah
                             val statusStr = item.status ?: "selesai"
                             val koin = detailSampah?.coin ?: item.coin ?: 0
 
-                            // LOGIKA PERHITUNGAN: Hanya koin dari status 'selesai' yang dijumlahkan
                             if (statusStr.lowercase() == "selesai") {
                                 accumulatedPoin += koin
                             }
@@ -81,9 +98,7 @@ class SetoranViewModel : ViewModel() {
                             )
                         }
 
-                        // Update state total poin agar UI di semua screen ter-refresh
                         totalPoinUser = accumulatedPoin
-
                         Log.d("API_LAPORAN_SUCCESS", "Data dimuat. Total Poin: $totalPoinUser")
                     } else {
                         val errorBody = response.errorBody()?.string() ?: "Gagal memuat laporan"
@@ -128,7 +143,6 @@ class SetoranViewModel : ViewModel() {
                 override fun onResponse(call: Call<SetoranResponse>, response: Response<SetoranResponse>) {
                     if (response.isSuccessful) {
                         onSuccess(response.body()?.message ?: "Setoran berhasil diproses!")
-                        // Refresh history agar poin langsung update setelah submit (jika backend langsung verifikasi)
                         loadLaporanHistory { }
                     } else {
                         val errorMsg = response.errorBody()?.string() ?: "Gagal memproses data"
