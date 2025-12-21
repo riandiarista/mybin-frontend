@@ -36,7 +36,7 @@ fun LaporanScreen(navController: NavController, viewModel: SetoranViewModel) {
     var showFilterDialog by remember { mutableStateOf(false) }
     var showExportDialog by remember { mutableStateOf(false) }
 
-    // Memanggil data riwayat (Selesai/Ditolak) dari API saat layar dibuka
+    // Memanggil data riwayat agar poin terhitung otomatis di ViewModel
     LaunchedEffect(Unit) {
         viewModel.loadLaporanHistory { errorMessage ->
             Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
@@ -77,7 +77,8 @@ fun LaporanScreen(navController: NavController, viewModel: SetoranViewModel) {
                     .padding(horizontal = 16.dp)
             ) {
                 item {
-                    TotalPointsCard()
+                    // PERBAIKAN: Mengirimkan total poin asli dari ViewModel
+                    TotalPointsCard(points = viewModel.totalPoinUser)
                     Spacer(modifier = Modifier.height(16.dp))
                     TransactionHeader { showFilterDialog = true }
                     Spacer(modifier = Modifier.height(8.dp))
@@ -94,7 +95,6 @@ fun LaporanScreen(navController: NavController, viewModel: SetoranViewModel) {
                     }
                 }
 
-                // Menampilkan data asli dari Backend melalui ViewModel
                 items(viewModel.laporanList) { setoran ->
                     SetoranItemComponent(setoran)
                     Spacer(modifier = Modifier.height(12.dp))
@@ -114,7 +114,6 @@ fun LaporanScreen(navController: NavController, viewModel: SetoranViewModel) {
 
 @Composable
 fun SetoranItemComponent(setoran: SetoranData) {
-    // Penanganan status null atau tidak dikenal secara aman
     val statusRaw = setoran.status.lowercase()
     val isDitolak = statusRaw == "ditolak"
     val statusColor = if (isDitolak) Color.Red else Color(0xFF2EBD70)
@@ -131,7 +130,6 @@ fun SetoranItemComponent(setoran: SetoranData) {
                 Text("#${setoran.id}", fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.weight(1f))
 
-                // Tampilan poin yang disesuaikan dengan status
                 Text(
                     text = if (isDitolak) "0 Poin" else "+${setoran.totalKoin} Poin",
                     color = if (isDitolak) Color.Gray else Color(0xFF2EBD70),
@@ -167,7 +165,7 @@ fun SetoranItemComponent(setoran: SetoranData) {
 // --- KOMPONEN UI PENDUKUNG ---
 
 @Composable
-fun TotalPointsCard() {
+fun TotalPointsCard(points: Int) { // PERBAIKAN: Parameter points ditambahkan
     Card(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
         shape = RoundedCornerShape(16.dp),
@@ -178,7 +176,12 @@ fun TotalPointsCard() {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("🪙", fontSize = 28.sp)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("1,500", fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                // PERBAIKAN: Menampilkan poin dinamis dengan format ribuan
+                Text(
+                    text = String.format("%,d", points),
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
             Text("Poin terupdate otomatis setelah verifikasi.", fontSize = 12.sp, color = Color.Gray)
         }

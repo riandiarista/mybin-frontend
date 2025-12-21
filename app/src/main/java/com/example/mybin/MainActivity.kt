@@ -90,7 +90,7 @@ class MainActivity : ComponentActivity() {
                     }
 
                     composable("MainPage") {
-                        MainPage(navController)
+                        MainPage(navController, setoranViewModel)
                     }
                     composable("LaporanScreen") {
                         LaporanScreen(navController, setoranViewModel)
@@ -196,7 +196,7 @@ class MainActivity : ComponentActivity() {
                         SampahkuScreen(navController, sampahViewModel)
                     }
                     composable("ExchangeScreen") {
-                        ExchangeScreen(navController)
+                        ExchangeScreen(navController, setoranViewModel)
                     }
                 }
             }

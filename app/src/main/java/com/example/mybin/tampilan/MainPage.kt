@@ -22,13 +22,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.example.mybin.R
-import com.example.mybin.ui.theme.MyBinTheme
+import com.example.mybin.viewmodel.SetoranViewModel
 
 private enum class MenuState {
     EXPANDED,
@@ -37,10 +35,15 @@ private enum class MenuState {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainPage(navController: NavController) {
+fun MainPage(navController: NavController, viewModel: SetoranViewModel) {
     val greenColor = Color(0xFF2EBD70)
     var menuState by remember { mutableStateOf(MenuState.COLLAPSED) }
     val transition = updateTransition(targetState = menuState, label = "Menu Transition")
+
+    // PERUBAHAN: Memanggil data laporan saat MainPage dibuka agar poin terhitung otomatis
+    LaunchedEffect(Unit) {
+        viewModel.loadLaporanHistory { /* handle error jika perlu */ }
+    }
 
     Scaffold(
         bottomBar = {
@@ -101,7 +104,7 @@ fun MainPage(navController: NavController) {
                             .alpha(itemAlpha),
                         icon = Icons.Default.Person,
                         label = "Account",
-                        onClick = { navController.navigate("profile_screen") } // Navigate to ProfileScreen
+                        onClick = { navController.navigate("profile_screen") }
                     )
 
                     FloatingActionButton(
@@ -122,7 +125,7 @@ fun MainPage(navController: NavController) {
             .fillMaxSize()
             .padding(paddingValues)) {
             Image(
-                painter = painterResource(id = R.drawable.orang), // Ganti dengan gambar latar belakang Anda
+                painter = painterResource(id = R.drawable.orang),
                 contentDescription = "Background",
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
@@ -142,7 +145,7 @@ fun MainPage(navController: NavController) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Image(
-                            painter = painterResource(id = R.drawable.introawal), // Ganti dengan gambar profil Anda
+                            painter = painterResource(id = R.drawable.introawal),
                             contentDescription = "Profile Picture",
                             modifier = Modifier
                                 .size(40.dp)
@@ -170,10 +173,15 @@ fun MainPage(navController: NavController) {
                     ) {
                         Text("Selection", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = greenColor)
                         Spacer(modifier = Modifier.height(8.dp))
+
+                        // PERUBAHAN: Menampilkan Poin Asli dari ViewModel
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Star, contentDescription = "Bin Points", tint = Color(0xFFFFC107))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("0 Bin Points", fontWeight = FontWeight.Bold)
+                            Text(
+                                text = "${viewModel.totalPoinUser} Bin Points",
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                         Spacer(modifier = Modifier.height(24.dp))
 
@@ -220,13 +228,5 @@ fun SelectionItem(icon: ImageVector, label: String, onClick: () -> Unit = {}) {
         }
         Spacer(modifier = Modifier.height(8.dp))
         Text(label, fontWeight = FontWeight.Medium, color = Color.Gray)
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun MainPagePreview() {
-    MyBinTheme {
-        MainPage(rememberNavController())
     }
 }

@@ -20,15 +20,17 @@ import retrofit2.Callback
 import retrofit2.Response
 
 class SetoranViewModel : ViewModel() {
-    // State untuk daftar setoran sementara/lokal
     private val _setoranList = mutableStateListOf<SetoranData>()
     val setoranList: List<SetoranData> get() = _setoranList
 
-    // State untuk data laporan final (Selesai/Ditolak) dari API
     private val _laporanList = mutableStateListOf<SetoranData>()
     val laporanList: List<SetoranData> get() = _laporanList
 
-    // State indikator loading
+    // --- STATE POIN OTOMATIS ---
+    // State ini akan dipantau oleh MainMenu, LaporanScreen, dan ExchangeScreen
+    var totalPoinUser by mutableStateOf(0)
+        private set
+
     var isLoading by mutableStateOf(false)
 
     fun addSetoran(setoran: SetoranData) {
@@ -36,8 +38,8 @@ class SetoranViewModel : ViewModel() {
     }
 
     /**
-     * FUNGSI UTAMA: Memuat riwayat laporan dari API.
-     * Mengakses data secara hirarkis: Objek Setoran -> Objek Sampah.
+     * Memuat riwayat laporan dan menghitung akumulasi poin secara otomatis
+     * berdasarkan setoran yang berstatus 'selesai'.
      */
     fun loadLaporanHistory(onError: (String) -> Unit) {
         val token = AuthTokenManager.authToken
@@ -55,24 +57,34 @@ class SetoranViewModel : ViewModel() {
                         val remoteData = response.body()?.data ?: emptyList()
 
                         _laporanList.clear()
+                        var accumulatedPoin = 0 // Variabel penampung hitungan poin
+
                         remoteData.forEach { item ->
-                            // FIX: Mengambil data dari objek nested 'sampah' hasil include Sequelize
                             val detailSampah = item.sampah
+                            val statusStr = item.status ?: "selesai"
+                            val koin = detailSampah?.coin ?: item.coin ?: 0
+
+                            // LOGIKA PERHITUNGAN: Hanya koin dari status 'selesai' yang dijumlahkan
+                            if (statusStr.lowercase() == "selesai") {
+                                accumulatedPoin += koin
+                            }
 
                             _laporanList.add(
                                 SetoranData(
                                     id = item.id.toString(),
                                     tanggal = "Terverifikasi",
-                                    // Ambil 'jenis' dari objek sampah, jika null fallback ke item.jenis
                                     jenis = detailSampah?.jenis ?: item.jenis ?: "Jenis tidak diketahui",
                                     lokasi = "-",
-                                    status = item.status ?: "selesai",
-                                    // Ambil 'coin' dari objek sampah, jika null fallback ke item.coin
-                                    totalKoin = detailSampah?.coin ?: item.coin ?: 0
+                                    status = statusStr,
+                                    totalKoin = koin
                                 )
                             )
                         }
-                        Log.d("API_LAPORAN_SUCCESS", "Berhasil memuat ${remoteData.size} laporan.")
+
+                        // Update state total poin agar UI di semua screen ter-refresh
+                        totalPoinUser = accumulatedPoin
+
+                        Log.d("API_LAPORAN_SUCCESS", "Data dimuat. Total Poin: $totalPoinUser")
                     } else {
                         val errorBody = response.errorBody()?.string() ?: "Gagal memuat laporan"
                         onError("Gagal memuat laporan (Kode: ${response.code()})")
@@ -89,9 +101,6 @@ class SetoranViewModel : ViewModel() {
         }
     }
 
-    /**
-     * Mengirim data setoran baru ke Backend
-     */
     fun submitSetoran(
         sampahIds: String,
         totalKoin: Int,
@@ -119,6 +128,8 @@ class SetoranViewModel : ViewModel() {
                 override fun onResponse(call: Call<SetoranResponse>, response: Response<SetoranResponse>) {
                     if (response.isSuccessful) {
                         onSuccess(response.body()?.message ?: "Setoran berhasil diproses!")
+                        // Refresh history agar poin langsung update setelah submit (jika backend langsung verifikasi)
+                        loadLaporanHistory { }
                     } else {
                         val errorMsg = response.errorBody()?.string() ?: "Gagal memproses data"
                         onError("Error ${response.code()}: $errorMsg")
