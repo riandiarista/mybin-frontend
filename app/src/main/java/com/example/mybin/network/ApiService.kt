@@ -2,7 +2,7 @@ package com.example.mybin.network
 
 import com.example.mybin.model.SampahRequest
 import com.example.mybin.model.SampahResponse
-import com.example.mybin.model.UserProfileResponse // Impor data class yang baru dibuat
+import com.example.mybin.model.UserProfileResponse
 import retrofit2.Call
 import retrofit2.http.*
 
@@ -51,7 +51,7 @@ data class ExchangeRequest(
 data class ExchangeResponse(
     val message: String,
     val status: String,
-    val current_balance: Int?, // Menangkap saldo terbaru setelah dipotong di database
+    val current_balance: Int?,
     val data: ExchangeData?
 )
 
@@ -97,7 +97,7 @@ data class LoginRequest(val username: String, val password: String)
 data class LoginResponse(
     val message: String,
     val token: String?,
-    val user: UserDataLogin? // Opsional: Tambahkan info user saat login
+    val user: UserDataLogin?
 )
 data class UserDataLogin(val id: Int, val username: String, val total_poin_user: Int)
 data class FCMRequest(val fcm_token: String)
@@ -107,8 +107,6 @@ interface ApiService {
     @POST("api/login")
     fun login(@Body request: LoginRequest): Call<LoginResponse>
 
-    // --- PERUBAHAN: MODUL USER PROFILE (SINKRONISASI SALDO) ---
-    // Endpoint ini mengambil data langsung dari tabel users (kolom total_poin_user)
     @GET("api/auth/me")
     fun getUserProfile(
         @Header("Authorization") token: String
@@ -136,6 +134,13 @@ interface ApiService {
 
     @GET("api/setoran")
     fun getSetoran(@Header("Authorization") token: String): Call<SetoranResponse>
+
+    // PERUBAHAN: Menambahkan endpoint DELETE untuk menghapus data setoran berdasarkan ID
+    @DELETE("api/setoran/{id}")
+    fun deleteSetoran(
+        @Path("id") id: Int,
+        @Header("Authorization") token: String
+    ): Call<SetoranResponse>
 
     // --- MODUL LAPORAN (HISTORY) ---
     @GET("api/laporan/history")

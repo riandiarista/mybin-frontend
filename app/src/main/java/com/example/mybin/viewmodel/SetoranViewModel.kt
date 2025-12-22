@@ -31,15 +31,12 @@ class SetoranViewModel : ViewModel() {
     private val _laporanList = mutableStateListOf<SetoranData>()
     val laporanList: List<SetoranData> get() = _laporanList
 
-    // State untuk menampung response mentah dari API Setoran
     private val _setoranResponse = MutableStateFlow<SetoranResponse?>(null)
     val setoranResponse: StateFlow<SetoranResponse?> = _setoranResponse
 
-    // --- STATE FILTER ---
     var filterStatus by mutableStateOf("Semua")
     var filterJenis by mutableStateOf("Semua")
 
-    // --- LOGIKA FILTER DINAMIS ---
     val filteredLaporanList: List<SetoranData>
         get() {
             return _laporanList.filter { item ->
@@ -62,10 +59,6 @@ class SetoranViewModel : ViewModel() {
         _setoranList.add(0, setoran)
     }
 
-    /**
-     * FUNGSI BARU: Mengambil data sampah yang baru saja disetor dari Backend
-     * Digunakan oleh DataSetoranScreen.kt untuk menampilkan data real-time.
-     */
     fun getSetoran() {
         val token = AuthTokenManager.authToken
         if (token.isNullOrEmpty()) return
@@ -79,7 +72,6 @@ class SetoranViewModel : ViewModel() {
                         _setoranResponse.value = response.body()
                         val remoteData = response.body()?.data ?: emptyList()
 
-                        // Sinkronisasi ke list lokal untuk UI
                         _setoranList.clear()
                         remoteData.forEach { item ->
                             _setoranList.add(
@@ -93,13 +85,38 @@ class SetoranViewModel : ViewModel() {
                                 )
                             )
                         }
-                        Log.d("MyBin_Setoran", "Berhasil sinkronisasi data setoran")
+                    }
+                }
+                override fun onFailure(call: Call<SetoranResponse>, t: Throwable) {
+                    isLoading = false
+                    Log.e("ERROR", "Gagal load data setoran: ${t.message}")
+                }
+            })
+        }
+    }
+
+    // --- FUNGSI BARU: HAPUS DATA SETORAN ---
+    fun deleteSetoran(setoranId: Int, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
+        val token = AuthTokenManager.authToken
+        if (token.isNullOrEmpty()) {
+            onError("Sesi berakhir.")
+            return
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            ApiClient.instance.deleteSetoran(setoranId, "Bearer $token").enqueue(object : Callback<SetoranResponse> {
+                override fun onResponse(call: Call<SetoranResponse>, response: Response<SetoranResponse>) {
+                    if (response.isSuccessful) {
+                        // Menghapus data dari list lokal agar UI langsung update tanpa refresh manual
+                        _setoranList.removeAll { it.id == setoranId.toString() }
+                        onSuccess(response.body()?.message ?: "Data berhasil dihapus")
+                    } else {
+                        onError("Gagal menghapus data dari server")
                     }
                 }
 
                 override fun onFailure(call: Call<SetoranResponse>, t: Throwable) {
-                    isLoading = false
-                    Log.e("ERROR", "Gagal load data setoran: ${t.message}")
+                    onError("Koneksi gagal: ${t.message}")
                 }
             })
         }
@@ -161,7 +178,6 @@ class SetoranViewModel : ViewModel() {
                         onError("Gagal memuat riwayat")
                     }
                 }
-
                 override fun onFailure(call: Call<ListSampahResponse>, t: Throwable) {
                     isLoading = false
                     onError("Koneksi gagal")
@@ -199,7 +215,6 @@ class SetoranViewModel : ViewModel() {
                         onError(errorBody)
                     }
                 }
-
                 override fun onFailure(call: Call<ExchangeResponse>, t: Throwable) {
                     isLoading = false
                     onError("Koneksi gagal: ${t.message}")
@@ -228,13 +243,11 @@ class SetoranViewModel : ViewModel() {
                 override fun onResponse(call: Call<SetoranResponse>, response: Response<SetoranResponse>) {
                     if (response.isSuccessful) {
                         onSuccess(response.body()?.message ?: "Setoran berhasil!")
-                        // Setelah sukses submit, panggil getSetoran untuk refresh list otomatis
                         getSetoran()
                     } else {
                         onError("Gagal memproses setoran")
                     }
                 }
-
                 override fun onFailure(call: Call<SetoranResponse>, t: Throwable) {
                     onError("Gagal terhubung ke server")
                 }
