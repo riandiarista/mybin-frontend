@@ -2,6 +2,8 @@ package com.example.mybin.tampilan
 
 import android.content.Context
 import android.net.Uri
+import android.util.Base64 // DITAMBAHKAN
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -34,26 +36,40 @@ import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.mybin.R
 import com.example.mybin.viewmodel.SampahViewModel
-import kotlinx.coroutines.launch // DITAMBAHKAN
+import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
+
+// Fungsi Helper untuk konversi URI gambar ke String Base64 (Sama seperti di DetailSampahScreen)
+fun editUriToBase64(context: Context, uri: Uri): String? {
+    return try {
+        val inputStream = context.contentResolver.openInputStream(uri)
+        val bytes = inputStream?.readBytes()
+        inputStream?.close()
+        if (bytes != null) {
+            Base64.encodeToString(bytes, Base64.NO_WRAP)
+        } else null
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
+    }
+}
 
 @Composable
 fun EditSampahScreen(navController: NavController, sampahId: String, sampahViewModel: SampahViewModel = viewModel()) {
     val sampah = sampahViewModel.getSampahById(sampahId)
 
-    // DITAMBAHKAN UNTUK MENAMPILKAN PESAN SNACKBAR
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
     if (sampah != null) {
         var detailSampah by remember { mutableStateOf(sampah.detailSampah) }
 
-        // UBAH: Gunakan dua state untuk Total Bobot (Teks untuk input, Float untuk API)
         var totalBobotText by remember { mutableStateOf(sampah.totalBobot.removeSuffix(" Kg")) }
         var totalBobotFloat by remember { mutableStateOf(sampah.totalBobot.removeSuffix(" Kg").toFloatOrNull() ?: 0f) }
 
+        // imageUri menyimpan URI lokal dari galeri/kamera
         var imageUri by remember { mutableStateOf(sampah.imageUri) }
         var tempImageUri by remember { mutableStateOf<Uri?>(null) }
         val context = LocalContext.current
@@ -81,7 +97,6 @@ fun EditSampahScreen(navController: NavController, sampahId: String, sampahViewM
         }
 
         fun calculateKoin() {
-            // UBAH: Gunakan totalBobotFloat untuk perhitungan
             val bobot = totalBobotFloat
             val koinPerKg = when (sampah.jenisSampah) {
                 "Organik" -> 1000
@@ -100,7 +115,6 @@ fun EditSampahScreen(navController: NavController, sampahId: String, sampahViewM
                 modifier = Modifier.fillMaxSize()
             )
 
-            // DITAMBAHKAN: SnackbarHost
             SnackbarHost(
                 hostState = snackbarHostState,
                 modifier = Modifier
@@ -171,10 +185,9 @@ fun EditSampahScreen(navController: NavController, sampahId: String, sampahViewM
 
                     Text("Total Bobot (kg)", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     OutlinedTextField(
-                        value = totalBobotText, // UBAH: Gunakan totalBobotText untuk input
+                        value = totalBobotText,
                         onValueChange = {
                             totalBobotText = it
-                            // Update state float juga untuk perhitungan dan API
                             totalBobotFloat = it.toFloatOrNull() ?: 0f
                             calculateKoin()
                         },
@@ -186,9 +199,10 @@ fun EditSampahScreen(navController: NavController, sampahId: String, sampahViewM
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    if (imageUri != null) {
+                    // Menampilkan Gambar (Prioritas: imageUri baru, lalu string foto lama dari DB)
+                    if (imageUri != null || !sampah.foto.isNullOrEmpty()) {
                         Image(
-                            painter = rememberAsyncImagePainter(imageUri),
+                            painter = rememberAsyncImagePainter(imageUri ?: sampah.foto),
                             contentDescription = "Selected Image",
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -234,18 +248,21 @@ fun EditSampahScreen(navController: NavController, sampahId: String, sampahViewM
 
                     Button(
                         onClick = {
-                            // LOGIKA BARU: PANGGIL updateSampahInApi
+                            // PROSES KONVERSI: Konversi URI baru ke Base64 jika ada, jika tidak gunakan foto lama
+                            val base64Image = imageUri?.let { editUriToBase64(context, it) } ?: sampah.foto
+
+                            // PANGGIL updateSampahInApi dengan parameter 'foto'
                             sampahViewModel.updateSampahInApi(
                                 id = sampah.id,
-                                jenis = sampah.jenisSampah, // Jenis tidak diubah di screen ini
+                                jenis = sampah.jenisSampah,
                                 berat = totalBobotFloat,
                                 detail = detailSampah,
                                 coin = estimasiKoin,
+                                foto = base64Image, // Menyertakan data gambar (Base64)
                                 onSuccess = { message ->
                                     scope.launch {
                                         snackbarHostState.showSnackbar(message)
                                     }
-                                    // Kembali ke halaman sebelumnya setelah berhasil
                                     navController.popBackStack()
                                 },
                                 onError = { message ->
@@ -266,7 +283,6 @@ fun EditSampahScreen(navController: NavController, sampahId: String, sampahViewM
             }
         }
     } else {
-        // Handle case where sampah is not found
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("Sampah tidak ditemukan.")
         }

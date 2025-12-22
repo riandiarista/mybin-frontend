@@ -8,6 +8,8 @@ data class SampahData(
     val jenisSampah: String,
     val detailSampah: String,
     val totalBobot: String,
-    val imageUri: Uri?,
-    val estimasiKoin: Int
+    val imageUri: Uri?, // Digunakan untuk menyimpan URI foto sementara dari kamera/galeri
+    val estimasiKoin: Int,
+    // PERUBAHAN PENTING: Tambahkan field foto untuk menampung string Base64 dari Backend
+    val foto: String? = null
 )

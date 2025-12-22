@@ -20,6 +20,7 @@ import retrofit2.Callback
 import retrofit2.Response
 
 class SampahViewModel : ViewModel() {
+    // List yang dipantau oleh UI Compose
     val sampahList = mutableStateListOf<SampahData>()
 
     // State untuk indikator loading di UI
@@ -52,6 +53,7 @@ class SampahViewModel : ViewModel() {
         berat: Float,
         detail: String,
         coin: Int,
+        foto: String?, // Data Base64
         onSuccess: (String) -> Unit,
         onError: (String) -> Unit
     ) {
@@ -61,12 +63,15 @@ class SampahViewModel : ViewModel() {
             return
         }
 
+        // Sanitasi Base64: Menghapus spasi atau baris baru agar tidak rusak saat dikirim
+        val sanitizedFoto = foto?.replace("\\s".toRegex(), "")
+
         val requestBody = SampahRequest(
             jenis = jenis,
             berat = berat,
             detail = detail,
             coin = coin,
-            foto = null
+            foto = sanitizedFoto
         )
 
         viewModelScope.launch(Dispatchers.IO) {
@@ -76,7 +81,8 @@ class SampahViewModel : ViewModel() {
             ).enqueue(object : Callback<SampahResponse> {
                 override fun onResponse(call: Call<SampahResponse>, response: Response<SampahResponse>) {
                     if (response.isSuccessful) {
-                        onSuccess("Data sampah berhasil disimpan!")
+                        // Memuat ulang data agar list di SampahkuScreen terupdate otomatis
+                        loadSampah({ onSuccess("Data sampah berhasil disimpan!") }, { onError(it) })
                     } else {
                         val errorBody = response.errorBody()?.string() ?: "Respons error tidak dikenal"
                         onError("Gagal menyimpan data (Kode: ${response.code()})")
@@ -93,7 +99,6 @@ class SampahViewModel : ViewModel() {
 
     /**
      * Memuat data sampah dari backend.
-     * PERBAIKAN: Menggunakan operator elvis (?:) untuk menangani data nullable dari API.
      */
     fun loadSampah(
         onSuccess: (String) -> Unit,
@@ -109,33 +114,44 @@ class SampahViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             ApiClient.instance.getSampah(token = "Bearer $token").enqueue(object : Callback<ListSampahResponse> {
                 override fun onResponse(call: Call<ListSampahResponse>, response: Response<ListSampahResponse>) {
-                    isLoading = false
-                    if (response.isSuccessful) {
-                        val remoteSampahList = response.body()?.data ?: emptyList()
+                    // Pastikan update UI dilakukan di Main Thread
+                    viewModelScope.launch(Dispatchers.Main) {
+                        isLoading = false
+                        if (response.isSuccessful) {
+                            val remoteSampahList = response.body()?.data ?: emptyList()
 
-                        sampahList.clear()
-                        remoteSampahList.forEach { sampah ->
-                            // PERBAIKAN: Map data nullable (String?, Int?, Float?) ke non-nullable (String, Int)
-                            sampahList.add(
-                                SampahData(
-                                    id = sampah.id.toString(),
-                                    jenisSampah = sampah.jenis ?: "Tanpa Jenis",
-                                    detailSampah = sampah.detail ?: "Tidak ada detail",
-                                    totalBobot = "${sampah.berat ?: 0f} Kg",
-                                    imageUri = null,
-                                    estimasiKoin = sampah.coin ?: 0
+                            // LOG PENTING: Untuk melacak apakah string foto terisi atau kosong (0)
+                            remoteSampahList.forEachIndexed { index, s ->
+                                Log.d("SAMP_VM", "Item $index | ID: ${s.id} | FotoLength: ${s.foto?.length ?: 0}")
+                            }
+
+                            sampahList.clear()
+                            remoteSampahList.forEach { sampah ->
+                                sampahList.add(
+                                    SampahData(
+                                        id = sampah.id.toString(),
+                                        jenisSampah = sampah.jenis ?: "Tanpa Jenis",
+                                        detailSampah = sampah.detail ?: "Tidak ada detail",
+                                        totalBobot = "${sampah.berat ?: 0f} Kg",
+                                        imageUri = null,
+                                        estimasiKoin = sampah.coin ?: 0,
+                                        foto = sampah.foto // Mengambil string Base64 dari backend
+                                    )
                                 )
-                            )
+                            }
+                            onSuccess("Berhasil memuat data.")
+                            Log.d("SAMP_VM", "Total data dimuat: ${sampahList.size} item")
+                        } else {
+                            onError("Gagal memuat data (Kode: ${response.code()})")
                         }
-                        onSuccess("Berhasil memuat data.")
-                    } else {
-                        onError("Gagal memuat data (Kode: ${response.code()})")
                     }
                 }
 
                 override fun onFailure(call: Call<ListSampahResponse>, t: Throwable) {
-                    isLoading = false
-                    onError("Koneksi gagal: ${t.message}")
+                    viewModelScope.launch(Dispatchers.Main) {
+                        isLoading = false
+                        onError("Koneksi gagal: ${t.message}")
+                    }
                 }
             })
         }
@@ -150,6 +166,7 @@ class SampahViewModel : ViewModel() {
         berat: Float,
         detail: String,
         coin: Int,
+        foto: String?,
         onSuccess: (String) -> Unit,
         onError: (String) -> Unit
     ) {
@@ -159,12 +176,15 @@ class SampahViewModel : ViewModel() {
             return
         }
 
+        // Sanitasi Base64
+        val sanitizedFoto = foto?.replace("\\s".toRegex(), "")
+
         val requestBody = SampahRequest(
             jenis = jenis,
             berat = berat,
             detail = detail,
             coin = coin,
-            foto = null
+            foto = sanitizedFoto
         )
 
         viewModelScope.launch(Dispatchers.IO) {

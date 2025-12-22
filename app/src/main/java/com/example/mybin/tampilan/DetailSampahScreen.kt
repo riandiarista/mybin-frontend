@@ -2,6 +2,7 @@ package com.example.mybin.tampilan
 
 import android.content.Context
 import android.net.Uri
+import android.util.Base64 // Import untuk konversi gambar
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -66,17 +67,38 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import kotlinx.coroutines.launch // Import CoroutineScope
+import kotlinx.coroutines.launch
+
+// Fungsi Helper untuk konversi URI gambar ke String Base64
+fun uriToBase64(context: Context, uri: Uri): String? {
+    return try {
+        val inputStream = context.contentResolver.openInputStream(uri)
+        val bytes = inputStream?.readBytes()
+        inputStream?.close()
+        if (bytes != null) {
+            // PENTING: Gunakan NO_WRAP agar string tidak terputus oleh karakter baris baru (\n)
+            // Ini memastikan string Base64 utuh saat dikirim ke MySQL
+            Base64.encodeToString(bytes, Base64.NO_WRAP)
+        } else null
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
+    }
+}
 
 @Composable
-fun DetailSampahScreen(navController: NavController, jenisSampah: String, harga: String, sampahViewModel: SampahViewModel = viewModel()) {
+fun DetailSampahScreen(
+    navController: NavController,
+    jenisSampah: String,
+    harga: String,
+    sampahViewModel: SampahViewModel = viewModel()
+) {
     var detailSampah by remember { mutableStateOf("") }
     var totalBobot by remember { mutableStateOf("") }
     var imageUri by remember { mutableStateOf<Uri?>(null) }
     var tempImageUri by remember { mutableStateOf<Uri?>(null) }
     val context = LocalContext.current
 
-    // Tambahkan state dan scope untuk Snackbar
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -108,13 +130,11 @@ fun DetailSampahScreen(navController: NavController, jenisSampah: String, harga:
             modifier = Modifier.fillMaxSize()
         )
 
-        // Tambahkan SnackbarHost
         SnackbarHost(
             hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.TopCenter).padding(top = 80.dp) // Posisikan di bawah top bar
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 80.dp)
         )
 
-        // Top Bar with Back Button and Title
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -145,7 +165,7 @@ fun DetailSampahScreen(navController: NavController, jenisSampah: String, harga:
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .background(
-                    Color(0xFFE8F5E9), // Light green background
+                    Color(0xFFE8F5E9),
                     shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp)
                 )
                 .padding(16.dp),
@@ -165,7 +185,6 @@ fun DetailSampahScreen(navController: NavController, jenisSampah: String, harga:
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Form Section
             Column(horizontalAlignment = Alignment.Start) {
                 Text("Detail Sampah", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 OutlinedTextField(
@@ -182,7 +201,7 @@ fun DetailSampahScreen(navController: NavController, jenisSampah: String, harga:
                 Text("Total Bobot (kg)", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 OutlinedTextField(
                     value = totalBobot,
-                    onValueChange = { totalBobot = it.filter { char -> char.isDigit() || char == '.' } }, // Filter input agar hanya angka/titik
+                    onValueChange = { totalBobot = it.filter { char -> char.isDigit() || char == '.' } },
                     placeholder = { Text("isilahh.......") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
@@ -248,7 +267,10 @@ fun DetailSampahScreen(navController: NavController, jenisSampah: String, harga:
                             return@Button
                         }
 
-                        // Hitung Estimasi Koin
+                        // PROSES KONVERSI: Mengubah URI menjadi string Base64 untuk dikirim ke API
+                        val base64Image = imageUri?.let { uriToBase64(context, it) }
+
+                        // Logika perhitungan estimasi koin
                         val koinPerKg = when (jenisSampah) {
                             "Organik" -> 1000
                             "Anorganik" -> 2000
@@ -257,28 +279,29 @@ fun DetailSampahScreen(navController: NavController, jenisSampah: String, harga:
                         }
                         val estimasiKoin = (bobotFloat * koinPerKg).toInt()
 
-                        // 1. Simpan ke Backend API
+                        // 1. Kirim data ke Backend API (Termasuk parameter foto)
                         sampahViewModel.saveSampahToApi(
                             jenis = jenisSampah,
                             berat = bobotFloat,
                             detail = detailSampah,
                             coin = estimasiKoin,
+                            foto = base64Image, // Mengirim string Base64 ke server
                             onSuccess = { message ->
                                 scope.launch { snackbarHostState.showSnackbar(message) }
 
-                                // 2. Jika API sukses, tambahkan ke list lokal dan navigasi
+                                // 2. Tambahkan ke list lokal agar UI terupdate seketika
                                 val newSampah = SampahData(
                                     jenisSampah = jenisSampah,
                                     detailSampah = detailSampah,
                                     totalBobot = "$totalBobot Kg",
                                     imageUri = imageUri,
-                                    estimasiKoin = estimasiKoin
+                                    estimasiKoin = estimasiKoin,
+                                    foto = base64Image // Disimpan di model lokal untuk tampilan instan
                                 )
                                 sampahViewModel.addSampah(newSampah)
                                 navController.popBackStack()
                             },
                             onError = { message ->
-                                // Tampilkan pesan error jika gagal menyimpan
                                 scope.launch { snackbarHostState.showSnackbar(message) }
                             }
                         )

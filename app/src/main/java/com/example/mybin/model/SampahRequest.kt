@@ -2,27 +2,40 @@ package com.example.mybin.model
 
 import com.google.gson.annotations.SerializedName
 
-// 1. Model untuk mengirim data ke API (Body Request)
+/**
+ * 1. Model untuk mengirim data ke API (Body Request)
+ * Digunakan saat POST (Create) dan PUT (Update) sampah.
+ */
 data class SampahRequest(
-    val jenis: String,
-    val berat: Float,
-    val detail: String,
-    val coin: Int,
-    val foto: String? // Biarkan sebagai String, karena Uri tidak bisa langsung dikirim
+    @SerializedName("jenis") val jenis: String,
+    @SerializedName("berat") val berat: Float,
+    @SerializedName("detail") val detail: String,
+    @SerializedName("coin") val coin: Int,
+    // Field foto menampung string Base64 dari gambar yang diambil
+    @SerializedName("foto") val foto: String?
 )
 
-// 2. Model untuk respon dari API
+/**
+ * 2. Model untuk respon tunggal dari API
+ * Digunakan saat mendapatkan feedback setelah simpan, update, atau delete data.
+ */
 data class SampahResponse(
-    val message: String,
-    val data: Sampah? // Data yang dikembalikan setelah disimpan
+    @SerializedName("message") val message: String,
+    @SerializedName("data") val data: Sampah?
 )
 
+/**
+ * 3. Model Detail Data Sampah
+ * Mencerminkan struktur kolom di database (tabel sampahs).
+ */
 data class Sampah(
-    val id: Int,
-    val user_id: Int,
-    val jenis: String,
-    val berat: Float,
-    val detail: String?,
-    val coin: Int,
-    val foto: String?
+    @SerializedName("id") val id: Int,
+    @SerializedName("user_id") val user_id: Int,
+    @SerializedName("jenis") val jenis: String,
+    @SerializedName("berat") val berat: Float,
+    @SerializedName("detail") val detail: String?,
+    @SerializedName("coin") val coin: Int,
+    @SerializedName("status") val status: String? = "selesai",
+    // Field foto untuk sinkronisasi gambar dari backend ke UI
+    @SerializedName("foto") val foto: String?
 )

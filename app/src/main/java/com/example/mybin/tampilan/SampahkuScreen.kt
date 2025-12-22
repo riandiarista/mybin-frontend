@@ -3,7 +3,6 @@ package com.example.mybin.tampilan
 import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -66,7 +65,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import coil.compose.rememberAsyncImagePainter
+import coil.compose.AsyncImage
 import com.example.mybin.R
 import com.example.mybin.model.SampahData
 import com.example.mybin.ui.theme.MyBinTheme
@@ -76,12 +75,12 @@ import com.example.mybin.viewmodel.SampahViewModel
 @Composable
 fun SampahkuScreen(navController: NavController, sampahViewModel: SampahViewModel = viewModel()) {
     val sampleData = sampahViewModel.sampahList
-    val context = LocalContext.current // Mendapatkan konteks untuk Toast
+    val context = LocalContext.current
 
     var showDeleteDialog by remember { mutableStateOf(false) }
     var itemToDelete by remember { mutableStateOf<SampahData?>(null) }
 
-    // FIX 1: Panggil loadSampah saat Composable pertama kali masuk ke komposisi
+    // Memuat data dari API saat layar pertama kali dibuka
     LaunchedEffect(Unit) {
         sampahViewModel.loadSampah(
             onSuccess = { message ->
@@ -126,7 +125,6 @@ fun SampahkuScreen(navController: NavController, sampahViewModel: SampahViewMode
             }
         }
     ) { paddingValues ->
-        // FIX 2: Tampilkan loading indicator jika sedang memuat data
         if (sampahViewModel.isLoading) {
             Box(
                 modifier = Modifier
@@ -137,7 +135,6 @@ fun SampahkuScreen(navController: NavController, sampahViewModel: SampahViewMode
                 CircularProgressIndicator(color = Color(0xFF4CAF50))
             }
         } else if (sampleData.isEmpty()) {
-            // Tampilkan pesan jika data kosong setelah loading selesai
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -151,13 +148,12 @@ fun SampahkuScreen(navController: NavController, sampahViewModel: SampahViewMode
                 )
             }
         } else {
-            // Tampilkan daftar jika data sudah dimuat
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
                     .background(Color(0xFFF5F5F5))
-                    .padding(horizontal = 16.dp), // Hanya padding horizontal
+                    .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 items(sampleData, key = { it.id }) { item ->
@@ -165,12 +161,10 @@ fun SampahkuScreen(navController: NavController, sampahViewModel: SampahViewMode
                         confirmValueChange = { dismissValue ->
                             when(dismissValue) {
                                 SwipeToDismissBoxValue.StartToEnd -> {
-                                    // Panggil Edit Screen saat swipe ke kanan
                                     navController.navigate("edit_sampah_screen/${item.id}")
                                     false
                                 }
                                 SwipeToDismissBoxValue.EndToStart -> {
-                                    // Tampilkan dialog hapus saat swipe ke kiri
                                     itemToDelete = item
                                     showDeleteDialog = true
                                     false
@@ -194,27 +188,20 @@ fun SampahkuScreen(navController: NavController, sampahViewModel: SampahViewMode
     if (showDeleteDialog) {
         DeleteConfirmationDialog(
             onConfirm = {
-                // LOGIC BARU: PANGGIL deleteSampahInApi
                 itemToDelete?.let { item ->
                     val idToDelete = item.id
-
                     if (idToDelete.isNotEmpty()) {
                         sampahViewModel.deleteSampahInApi(
                             id = idToDelete,
                             onSuccess = { message ->
-                                // Beri feedback Toast setelah API sukses
                                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                             },
                             onError = { message ->
-                                // Beri feedback Toast jika terjadi error
                                 Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                             }
                         )
-                    } else {
-                        Toast.makeText(context, "Error: ID sampah tidak valid.", Toast.LENGTH_LONG).show()
                     }
                 }
-                // Tutup dialog
                 showDeleteDialog = false
                 itemToDelete = null
             },
@@ -226,8 +213,6 @@ fun SampahkuScreen(navController: NavController, sampahViewModel: SampahViewMode
     }
 }
 
-// ... (Komponen SwipeBackground, SampahItemCard, DeleteConfirmationDialog, dan Preview tetap sama)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SwipeBackground(dismissState: SwipeToDismissBoxState) {
@@ -235,7 +220,7 @@ fun SwipeBackground(dismissState: SwipeToDismissBoxState) {
     val color by animateColorAsState(
         when (dismissState.targetValue) {
             SwipeToDismissBoxValue.Settled -> Color.LightGray
-            SwipeToDismissBoxValue.StartToEnd -> Color(0xFF4CAF50) // Green for Edit
+            SwipeToDismissBoxValue.StartToEnd -> Color(0xFF4CAF50)
             SwipeToDismissBoxValue.EndToStart -> Color.Red
         },
         label = ""
@@ -291,24 +276,36 @@ fun SampahItemCard(item: SampahData, modifier: Modifier = Modifier) {
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (item.imageUri != null) {
-                Image(
-                    painter = rememberAsyncImagePainter(item.imageUri),
-                    contentDescription = item.detailSampah,
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(CircleShape),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
-                Image(
-                    painter = painterResource(id = R.drawable.introawal),
-                    contentDescription = item.detailSampah,
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(CircleShape)
-                )
+            // LOGIKA GAMBAR: Konversi Base64 ke ByteArray (Solusi paling stabil)
+            val imageSource = remember(item.foto, item.imageUri) {
+                val rawFoto = item.foto
+                if (!rawFoto.isNullOrEmpty()) {
+                    try {
+                        val cleanBase64 = rawFoto
+                            .substringAfter("base64,")
+                            .replace("\\/", "/")
+                            .replace("\\s".toRegex(), "")
+
+                        android.util.Base64.decode(cleanBase64, android.util.Base64.DEFAULT)
+                    } catch (e: Exception) {
+                        item.imageUri ?: R.drawable.introawal
+                    }
+                } else {
+                    item.imageUri ?: R.drawable.introawal
+                }
             }
+
+            AsyncImage(
+                model = imageSource,
+                contentDescription = item.detailSampah,
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(CircleShape),
+                contentScale = ContentScale.Crop,
+                placeholder = painterResource(id = R.drawable.introawal),
+                error = painterResource(id = R.drawable.introawal)
+            )
+
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = item.jenisSampah, color = jenisColor, fontSize = 12.sp)
@@ -393,7 +390,6 @@ fun DeleteConfirmationDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
         }
     }
 }
-
 
 @Preview(showBackground = true)
 @Composable

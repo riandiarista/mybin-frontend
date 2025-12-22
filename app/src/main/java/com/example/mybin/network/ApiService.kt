@@ -15,6 +15,7 @@ data class Sampah(
     val detail: String?,
     val coin: Int?,
     val status: String?,
+    // PERUBAHAN: Field foto ditambahkan untuk sinkronisasi gambar Base64 dari DB
     val foto: String?,
     val sampah: SampahNestedDetail? = null
 )
@@ -116,6 +117,7 @@ interface ApiService {
     fun updateFCMToken(@Header("Authorization") token: String, @Body request: FCMRequest): Call<Void>
 
     // --- MODUL SAMPAH ---
+    // Pastikan SampahRequest Anda juga sudah memiliki field 'foto: String?'
     @POST("api/sampah")
     fun createSampah(@Header("Authorization") token: String, @Body request: SampahRequest): Call<SampahResponse>
 
@@ -135,7 +137,6 @@ interface ApiService {
     @GET("api/setoran")
     fun getSetoran(@Header("Authorization") token: String): Call<SetoranResponse>
 
-    // PERUBAHAN: Menambahkan endpoint DELETE untuk menghapus data setoran berdasarkan ID
     @DELETE("api/setoran/{id}")
     fun deleteSetoran(
         @Path("id") id: Int,
