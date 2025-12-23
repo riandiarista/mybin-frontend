@@ -1,22 +1,12 @@
 package com.example.mybin.viewmodel
 
 import android.util.Log
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mybin.model.SetoranData
 import com.example.mybin.model.UserProfileResponse
-import com.example.mybin.network.ApiClient
-import com.example.mybin.network.AuthTokenManager
-import com.example.mybin.network.ExchangeRequest
-import com.example.mybin.network.ExchangeResponse
-import com.example.mybin.network.ListSampahResponse
-import com.example.mybin.network.SetoranRequest
-import com.example.mybin.network.SetoranResponse
-import com.example.mybin.network.UpdateStatusRequest
+import com.example.mybin.network.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -39,16 +29,10 @@ class SetoranViewModel : ViewModel() {
     var filterJenis by mutableStateOf("Semua")
 
     val filteredLaporanList: List<SetoranData>
-        get() {
-            return _laporanList.filter { item ->
-                val matchesStatus = if (filterStatus == "Semua") true
-                else item.status.equals(filterStatus, ignoreCase = true)
-
-                val matchesJenis = if (filterJenis == "Semua") true
-                else item.jenis.equals(filterJenis, ignoreCase = true)
-
-                matchesStatus && matchesJenis
-            }
+        get() = _laporanList.filter { item ->
+            val matchesStatus = if (filterStatus == "Semua") true else item.status.equals(filterStatus, ignoreCase = true)
+            val matchesJenis = if (filterJenis == "Semua") true else item.jenis.equals(filterJenis, ignoreCase = true)
+            matchesStatus && matchesJenis
         }
 
     var totalPoinUser by mutableStateOf(0)
@@ -56,18 +40,14 @@ class SetoranViewModel : ViewModel() {
 
     var isLoading by mutableStateOf(false)
 
-    fun addSetoran(setoran: SetoranData) {
-        _setoranList.add(0, setoran)
-    }
+    fun fetchSetoran() = getSetoran()
 
-    fun fetchSetoran() {
-        getSetoran()
-    }
-
+    /**
+     * getSetoran: Mengambil data setoran aktif.
+     * Menggunakan item.total_koin agar tidak 0 setelah Hard Delete.
+     */
     fun getSetoran() {
-        val token = AuthTokenManager.authToken
-        if (token.isNullOrEmpty()) return
-
+        val token = AuthTokenManager.authToken ?: return
         isLoading = true
         viewModelScope.launch(Dispatchers.IO) {
             ApiClient.instance.getSetoran("Bearer $token").enqueue(object : Callback<SetoranResponse> {
@@ -79,226 +59,134 @@ class SetoranViewModel : ViewModel() {
 
                         _setoranList.clear()
                         remoteData.forEach { item ->
-                            Log.d("API_SETORAN", "ID: ${item.id}, User: ${item.user?.username}, Status: ${item.status}")
-
                             _setoranList.add(
                                 SetoranData(
                                     id = item.id.toString(),
                                     tanggal = "Sedang Proses",
-                                    jenis = item.sampah?.jenis ?: "Sampah Campuran",
+                                    jenis = item.sampah?.jenis ?: "Sampah Terverifikasi",
                                     lokasi = item.lokasi ?: "Lokasi Penjemputan",
                                     status = item.status ?: "menunggu",
-                                    totalKoin = item.sampah?.coin ?: 0,
+                                    // Ambil dari total_koin (snapshot)
+                                    totalKoin = item.total_koin ?: item.sampah?.coin ?: 0,
                                     namaUser = item.user?.username ?: "Pengguna"
                                 )
                             )
                         }
-                    } else {
-                        Log.e("API_ERROR", "Gagal load data: ${response.code()}")
                     }
                 }
-                override fun onFailure(call: Call<SetoranResponse>, t: Throwable) {
-                    isLoading = false
-                    Log.e("ERROR", "Gagal load data setoran: ${t.message}")
-                }
+                override fun onFailure(call: Call<SetoranResponse>, t: Throwable) { isLoading = false }
             })
         }
     }
 
-    // --- FUNGSI UPDATE STATUS (VERIFIKASI ADMIN) ---
     fun updateStatus(setoranId: String, status: String) {
-        val token = AuthTokenManager.authToken
-        if (token.isNullOrEmpty()) return
-
+        val token = AuthTokenManager.authToken ?: return
         val idInt = setoranId.toIntOrNull() ?: return
         val request = UpdateStatusRequest(status = status)
 
         isLoading = true
-        // Gunakan Dispatchers.IO untuk request jaringan
         viewModelScope.launch(Dispatchers.IO) {
-            // Karena backend mengirim res.json, kita tetap pakai Callback<Void>
-            // namun pastikan rute di ApiClient benar.
-            ApiClient.instance.updateStatusSetoran(idInt, "Bearer $token", request)
-                .enqueue(object : Callback<Void> {
-                    override fun onResponse(call: Call<Void>, response: Response<Void>) {
-                        if (response.isSuccessful) {
-                            Log.d("SUCCESS", "Status ID $setoranId berhasil diupdate ke $status")
-
-                            // Segera panggil fetchSetoran() untuk memperbarui tampilan
-                            viewModelScope.launch(Dispatchers.Main) {
-                                getSetoran()
-                            }
-                        } else {
-                            isLoading = false
-                            // Log body error untuk melihat apa yang salah di server
-                            val errorMsg = response.errorBody()?.string()
-                            Log.e("API_ERROR", "Gagal update: ${response.code()} -> $errorMsg")
-                        }
-                    }
-
-                    override fun onFailure(call: Call<Void>, t: Throwable) {
-                        isLoading = false
-                        Log.e("NETWORK_ERROR", "Gagal koneksi: ${t.message}")
-                    }
-                })
+            ApiClient.instance.updateStatusSetoran(idInt, "Bearer $token", request).enqueue(object : Callback<Void> {
+                override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                    if (response.isSuccessful) getSetoran() else isLoading = false
+                }
+                override fun onFailure(call: Call<Void>, t: Throwable) { isLoading = false }
+            })
         }
     }
 
     fun deleteSetoran(setoranId: Int, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
-        val token = AuthTokenManager.authToken
-        if (token.isNullOrEmpty()) {
-            onError("Sesi berakhir.")
-            return
-        }
-
+        val token = AuthTokenManager.authToken ?: return
         viewModelScope.launch(Dispatchers.IO) {
             ApiClient.instance.deleteSetoran(setoranId, "Bearer $token").enqueue(object : Callback<SetoranResponse> {
                 override fun onResponse(call: Call<SetoranResponse>, response: Response<SetoranResponse>) {
                     if (response.isSuccessful) {
                         _setoranList.removeAll { it.id == setoranId.toString() }
-                        onSuccess(response.body()?.message ?: "Data berhasil dihapus")
-                    } else {
-                        onError("Gagal menghapus data dari server")
-                    }
+                        onSuccess(response.body()?.message ?: "Data dihapus")
+                    } else onError("Gagal hapus")
                 }
-
-                override fun onFailure(call: Call<SetoranResponse>, t: Throwable) {
-                    onError("Koneksi gagal: ${t.message}")
-                }
+                override fun onFailure(call: Call<SetoranResponse>, t: Throwable) { onError("Error koneksi") }
             })
         }
     }
 
     fun loadUserBalance() {
-        val token = AuthTokenManager.authToken
-        if (token.isNullOrEmpty()) return
-
+        val token = AuthTokenManager.authToken ?: return
         viewModelScope.launch(Dispatchers.IO) {
             ApiClient.instance.getUserProfile("Bearer $token").enqueue(object : Callback<UserProfileResponse> {
                 override fun onResponse(call: Call<UserProfileResponse>, response: Response<UserProfileResponse>) {
-                    if (response.isSuccessful) {
-                        val saldoBersih = response.body()?.data?.totalPoinUser ?: 0
-                        totalPoinUser = saldoBersih
-                    }
+                    if (response.isSuccessful) totalPoinUser = response.body()?.data?.totalPoinUser ?: 0
                 }
-                override fun onFailure(call: Call<UserProfileResponse>, t: Throwable) {
-                    Log.e("ERROR", "Gagal load profile saldo: ${t.message}")
-                }
+                override fun onFailure(call: Call<UserProfileResponse>, t: Throwable) {}
             })
         }
     }
 
+    /**
+     * PERBAIKAN: loadLaporanHistory
+     * Memperbaiki pemetaan totalKoin agar tidak tampil 0 pada layar Riwayat.
+     */
     fun loadLaporanHistory(onError: (String) -> Unit) {
-        val token = AuthTokenManager.authToken
-        if (token.isNullOrEmpty()) {
-            onError("Sesi berakhir.")
-            return
-        }
-
+        val token = AuthTokenManager.authToken ?: return
         isLoading = true
         viewModelScope.launch(Dispatchers.IO) {
             ApiClient.instance.getLaporanHistory("Bearer $token").enqueue(object : Callback<ListSampahResponse> {
                 override fun onResponse(call: Call<ListSampahResponse>, response: Response<ListSampahResponse>) {
                     isLoading = false
                     if (response.isSuccessful) {
-                        val remoteData = response.body()?.data ?: emptyList()
                         _laporanList.clear()
-
-                        remoteData.forEach { item ->
-                            val detailSampah = item.sampah
-                            val statusStr = item.status ?: "pending"
-                            val koin = detailSampah?.coin ?: item.coin ?: 0
-
+                        response.body()?.data?.forEach { item ->
                             _laporanList.add(
                                 SetoranData(
                                     id = item.id.toString(),
                                     tanggal = "Terverifikasi",
-                                    jenis = detailSampah?.jenis ?: item.jenis ?: "Jenis tidak diketahui",
+                                    jenis = item.sampah?.jenis ?: item.jenis ?: "Sampah",
                                     lokasi = "-",
-                                    status = statusStr,
-                                    totalKoin = koin,
+                                    status = item.status ?: "pending",
+                                    // PERBAIKAN: Cek field koin pada berbagai kemungkinan level JSON
+                                    totalKoin = item.coin ?: item.total_koin ?: item.sampah?.coin ?: 0,
                                     namaUser = item.user?.username ?: "Pengguna"
                                 )
                             )
                         }
                         loadUserBalance()
-                    } else {
-                        onError("Gagal memuat riwayat")
                     }
                 }
-                override fun onFailure(call: Call<ListSampahResponse>, t: Throwable) {
-                    isLoading = false
-                    onError("Koneksi gagal")
-                }
+                override fun onFailure(call: Call<ListSampahResponse>, t: Throwable) { isLoading = false }
             })
         }
     }
 
-    fun submitExchange(
-        amountPoin: Int,
-        phoneNumber: String,
-        onSuccess: (String, Int) -> Unit,
-        onError: (String) -> Unit
-    ) {
-        val token = AuthTokenManager.authToken
-        if (token.isNullOrEmpty()) {
-            onError("Sesi berakhir.")
-            return
-        }
-
+    fun submitExchange(amountPoin: Int, phoneNumber: String, onSuccess: (String, Int) -> Unit, onError: (String) -> Unit) {
+        val token = AuthTokenManager.authToken ?: return
         isLoading = true
         val request = ExchangeRequest(amount_poin = amountPoin, phone_number = phoneNumber)
-
         viewModelScope.launch(Dispatchers.IO) {
             ApiClient.instance.createExchange("Bearer $token", request).enqueue(object : Callback<ExchangeResponse> {
                 override fun onResponse(call: Call<ExchangeResponse>, response: Response<ExchangeResponse>) {
                     isLoading = false
                     if (response.isSuccessful) {
                         val resBody = response.body()
-                        val saldoTerbaru = resBody?.current_balance ?: (totalPoinUser - amountPoin)
-                        totalPoinUser = saldoTerbaru
-                        onSuccess(resBody?.message ?: "Penukaran berhasil!", totalPoinUser)
-                    } else {
-                        val errorBody = response.errorBody()?.string() ?: "Saldo tidak cukup"
-                        onError(errorBody)
-                    }
+                        totalPoinUser = resBody?.current_balance ?: (totalPoinUser - amountPoin)
+                        onSuccess(resBody?.message ?: "Berhasil!", totalPoinUser)
+                    } else onError("Saldo tidak cukup")
                 }
-                override fun onFailure(call: Call<ExchangeResponse>, t: Throwable) {
-                    isLoading = false
-                    onError("Koneksi gagal: ${t.message}")
-                }
+                override fun onFailure(call: Call<ExchangeResponse>, t: Throwable) { isLoading = false }
             })
         }
     }
 
-    fun submitSetoran(
-        sampahIds: String,
-        totalKoin: Int,
-        lokasi: String,
-        onSuccess: (String) -> Unit,
-        onError: (String) -> Unit
-    ) {
-        val token = AuthTokenManager.authToken
-        if (token.isNullOrEmpty()) {
-            onError("Sesi berakhir.")
-            return
-        }
-
-        val request = SetoranRequest(sampahIds = sampahIds, totalKoin = totalKoin, lokasi = lokasi)
-
+    fun submitSetoran(sampahIds: String, totalKoin: Int, lokasi: String, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
+        val token = AuthTokenManager.authToken ?: return
+        isLoading = true
         viewModelScope.launch(Dispatchers.IO) {
-            ApiClient.instance.createSetoran("Bearer $token", request).enqueue(object : Callback<SetoranResponse> {
+            ApiClient.instance.createSetoran("Bearer $token", SetoranRequest(sampahIds, totalKoin, lokasi)).enqueue(object : Callback<SetoranResponse> {
                 override fun onResponse(call: Call<SetoranResponse>, response: Response<SetoranResponse>) {
-                    if (response.isSuccessful) {
-                        onSuccess(response.body()?.message ?: "Setoran berhasil!")
-                        getSetoran()
-                    } else {
-                        onError("Gagal memproses setoran")
-                    }
+                    isLoading = false
+                    if (response.isSuccessful) { getSetoran(); onSuccess(response.body()?.message ?: "Berhasil!") }
+                    else onError("Gagal memproses")
                 }
-                override fun onFailure(call: Call<SetoranResponse>, t: Throwable) {
-                    onError("Gagal terhubung ke server")
-                }
+                override fun onFailure(call: Call<SetoranResponse>, t: Throwable) { isLoading = false }
             })
         }
     }

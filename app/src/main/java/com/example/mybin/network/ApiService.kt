@@ -19,7 +19,13 @@ data class Sampah(
     val foto: String?,
     val sampah: SampahNestedDetail? = null,
     // TAMBAHAN: Menambahkan field user agar ViewModel bisa membaca objek user (username) dari backend
-    val user: UserDataLogin? = null
+    val user: UserDataLogin? = null,
+    /**
+     * PENAMBAHAN UNTUK RIWAYAT: total_koin
+     * Ditambahkan agar fungsi loadLaporanHistory di ViewModel tidak error
+     * saat mencoba membaca snapshot koin dari ListSampahResponse.
+     */
+    val total_koin: Int? = 0
 )
 
 data class SampahNestedDetail(
@@ -46,16 +52,22 @@ data class SetoranResponse(
     val data: List<SetoranItem>?
 )
 
-// TAMBAHAN: Model item setoran yang spesifik untuk verifikasi admin
+// PERBAIKAN FINAL: Model item setoran
 data class SetoranItem(
     val id: Int,
     val user_id: Int,
-    val sampahId: Int,
-    val lokasi: String,
+    val sampahId: Int?, // Diubah ke nullable karena di DB sekarang SET NULL
+    val lokasi: String?,
     val tanggal: String?,
-    val status: String,
-    val sampah: Sampah?, // Detail sampah (jenis & koin)
-    val user: UserDataLogin? // Detail user pengirim (untuk menampilkan nama di Admin)
+    val status: String?,
+    /**
+     * PENAMBAHAN KRUSIAL: total_koin
+     * Digunakan untuk membaca nilai snapshot koin dari kolom baru di tabel setorans.
+     * Ini yang mencegah koin tampil 0 di DataSetoranScreen.
+     */
+    val total_koin: Int?,
+    val sampah: Sampah?, // Detail sampah (akan null jika sudah Hard Delete)
+    val user: UserDataLogin? // Detail user pengirim
 )
 
 // TAMBAHAN: Model untuk request update status verifikasi (selesai/ditolak)
@@ -163,7 +175,6 @@ interface ApiService {
     ): Call<SetoranResponse>
 
     // TAMBAHAN: Endpoint untuk Admin mengubah status verifikasi
-    // Sesuai dengan route backend: router.put('/status/:id', ...)
     @PUT("api/setoran/status/{id}")
     fun updateStatusSetoran(
         @Path("id") id: Int,
