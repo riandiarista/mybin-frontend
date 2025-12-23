@@ -6,5 +6,7 @@ data class SetoranData(
     val jenis: String,
     val lokasi: String,
     val status: String,
-    val totalKoin: Int
+    val totalKoin: Int,
+    // TAMBAHAN: Properti untuk menyimpan nama user pengirim setoran
+    val namaUser: String = "Pengguna"
 )

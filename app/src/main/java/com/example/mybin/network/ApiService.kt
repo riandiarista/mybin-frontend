@@ -15,9 +15,11 @@ data class Sampah(
     val detail: String?,
     val coin: Int?,
     val status: String?,
-    // PERUBAHAN: Field foto ditambahkan untuk sinkronisasi gambar Base64 dari DB
+    // PERUBAHAN: Field foto untuk sinkronisasi gambar Base64 dari DB
     val foto: String?,
-    val sampah: SampahNestedDetail? = null
+    val sampah: SampahNestedDetail? = null,
+    // TAMBAHAN: Menambahkan field user agar ViewModel bisa membaca objek user (username) dari backend
+    val user: UserDataLogin? = null
 )
 
 data class SampahNestedDetail(
@@ -40,7 +42,25 @@ data class SetoranRequest(
 data class SetoranResponse(
     val message: String,
     val total_data: Int?,
-    val data: List<Sampah>?
+    // PERUBAHAN: Menggunakan SetoranItem agar data user pengirim ikut terbawa
+    val data: List<SetoranItem>?
+)
+
+// TAMBAHAN: Model item setoran yang spesifik untuk verifikasi admin
+data class SetoranItem(
+    val id: Int,
+    val user_id: Int,
+    val sampahId: Int,
+    val lokasi: String,
+    val tanggal: String?,
+    val status: String,
+    val sampah: Sampah?, // Detail sampah (jenis & koin)
+    val user: UserDataLogin? // Detail user pengirim (untuk menampilkan nama di Admin)
+)
+
+// TAMBAHAN: Model untuk request update status verifikasi (selesai/ditolak)
+data class UpdateStatusRequest(
+    val status: String
 )
 
 // --- MODEL DATA EXCHANGE (PENUKARAN POIN) ---
@@ -117,7 +137,6 @@ interface ApiService {
     fun updateFCMToken(@Header("Authorization") token: String, @Body request: FCMRequest): Call<Void>
 
     // --- MODUL SAMPAH ---
-    // Pastikan SampahRequest Anda juga sudah memiliki field 'foto: String?'
     @POST("api/sampah")
     fun createSampah(@Header("Authorization") token: String, @Body request: SampahRequest): Call<SampahResponse>
 
@@ -142,6 +161,15 @@ interface ApiService {
         @Path("id") id: Int,
         @Header("Authorization") token: String
     ): Call<SetoranResponse>
+
+    // TAMBAHAN: Endpoint untuk Admin mengubah status verifikasi
+    // Sesuai dengan route backend: router.put('/status/:id', ...)
+    @PUT("api/setoran/status/{id}")
+    fun updateStatusSetoran(
+        @Path("id") id: Int,
+        @Header("Authorization") token: String,
+        @Body request: UpdateStatusRequest
+    ): Call<Void>
 
     // --- MODUL LAPORAN (HISTORY) ---
     @GET("api/laporan/history")

@@ -16,6 +16,7 @@ import com.example.mybin.network.ExchangeResponse
 import com.example.mybin.network.ListSampahResponse
 import com.example.mybin.network.SetoranRequest
 import com.example.mybin.network.SetoranResponse
+import com.example.mybin.network.UpdateStatusRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -59,6 +60,10 @@ class SetoranViewModel : ViewModel() {
         _setoranList.add(0, setoran)
     }
 
+    fun fetchSetoran() {
+        getSetoran()
+    }
+
     fun getSetoran() {
         val token = AuthTokenManager.authToken
         if (token.isNullOrEmpty()) return
@@ -74,17 +79,22 @@ class SetoranViewModel : ViewModel() {
 
                         _setoranList.clear()
                         remoteData.forEach { item ->
+                            Log.d("API_SETORAN", "ID: ${item.id}, User: ${item.user?.username}, Status: ${item.status}")
+
                             _setoranList.add(
                                 SetoranData(
                                     id = item.id.toString(),
                                     tanggal = "Sedang Proses",
                                     jenis = item.sampah?.jenis ?: "Sampah Campuran",
-                                    lokasi = "Lokasi Penjemputan",
+                                    lokasi = item.lokasi ?: "Lokasi Penjemputan",
                                     status = item.status ?: "menunggu",
-                                    totalKoin = item.sampah?.coin ?: 0
+                                    totalKoin = item.sampah?.coin ?: 0,
+                                    namaUser = item.user?.username ?: "Pengguna"
                                 )
                             )
                         }
+                    } else {
+                        Log.e("API_ERROR", "Gagal load data: ${response.code()}")
                     }
                 }
                 override fun onFailure(call: Call<SetoranResponse>, t: Throwable) {
@@ -95,7 +105,45 @@ class SetoranViewModel : ViewModel() {
         }
     }
 
-    // --- FUNGSI BARU: HAPUS DATA SETORAN ---
+    // --- FUNGSI UPDATE STATUS (VERIFIKASI ADMIN) ---
+    fun updateStatus(setoranId: String, status: String) {
+        val token = AuthTokenManager.authToken
+        if (token.isNullOrEmpty()) return
+
+        val idInt = setoranId.toIntOrNull() ?: return
+        val request = UpdateStatusRequest(status = status)
+
+        isLoading = true
+        // Gunakan Dispatchers.IO untuk request jaringan
+        viewModelScope.launch(Dispatchers.IO) {
+            // Karena backend mengirim res.json, kita tetap pakai Callback<Void>
+            // namun pastikan rute di ApiClient benar.
+            ApiClient.instance.updateStatusSetoran(idInt, "Bearer $token", request)
+                .enqueue(object : Callback<Void> {
+                    override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                        if (response.isSuccessful) {
+                            Log.d("SUCCESS", "Status ID $setoranId berhasil diupdate ke $status")
+
+                            // Segera panggil fetchSetoran() untuk memperbarui tampilan
+                            viewModelScope.launch(Dispatchers.Main) {
+                                getSetoran()
+                            }
+                        } else {
+                            isLoading = false
+                            // Log body error untuk melihat apa yang salah di server
+                            val errorMsg = response.errorBody()?.string()
+                            Log.e("API_ERROR", "Gagal update: ${response.code()} -> $errorMsg")
+                        }
+                    }
+
+                    override fun onFailure(call: Call<Void>, t: Throwable) {
+                        isLoading = false
+                        Log.e("NETWORK_ERROR", "Gagal koneksi: ${t.message}")
+                    }
+                })
+        }
+    }
+
     fun deleteSetoran(setoranId: Int, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
         val token = AuthTokenManager.authToken
         if (token.isNullOrEmpty()) {
@@ -107,7 +155,6 @@ class SetoranViewModel : ViewModel() {
             ApiClient.instance.deleteSetoran(setoranId, "Bearer $token").enqueue(object : Callback<SetoranResponse> {
                 override fun onResponse(call: Call<SetoranResponse>, response: Response<SetoranResponse>) {
                     if (response.isSuccessful) {
-                        // Menghapus data dari list lokal agar UI langsung update tanpa refresh manual
                         _setoranList.removeAll { it.id == setoranId.toString() }
                         onSuccess(response.body()?.message ?: "Data berhasil dihapus")
                     } else {
@@ -169,7 +216,8 @@ class SetoranViewModel : ViewModel() {
                                     jenis = detailSampah?.jenis ?: item.jenis ?: "Jenis tidak diketahui",
                                     lokasi = "-",
                                     status = statusStr,
-                                    totalKoin = koin
+                                    totalKoin = koin,
+                                    namaUser = item.user?.username ?: "Pengguna"
                                 )
                             )
                         }
