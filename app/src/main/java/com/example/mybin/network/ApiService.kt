@@ -44,7 +44,6 @@ data class SetoranResponse(
     val data: List<SetoranItem>?
 )
 
-// Model item setoran yang sudah diperbarui dengan field Snapshot
 data class SetoranItem(
     val id: Int,
     val user_id: Int,
@@ -52,14 +51,11 @@ data class SetoranItem(
     val lokasi: String?,
     val tanggal: String?,
     val status: String?,
-    val total_koin: Int?, // Snapshot koin permanen
-
-    // --- PENAMBAHAN FIELD SNAPSHOT UNTUK DETAIL PINDAHAN ---
-    val detail_jenis: String?, // Menyimpan jenis sampah secara permanen
-    val detail_berat: Float?,  // Menyimpan berat sampah secara permanen
-    val detail_foto: String?,   // Menyimpan foto Base64 secara permanen
-
-    val sampah: Sampah?, // Bisa bernilai null jika data asli sudah di-hard delete
+    val total_koin: Int?,
+    val detail_jenis: String?,
+    val detail_berat: Float?,
+    val detail_foto: String?,
+    val sampah: Sampah?,
     val user: UserDataLogin?
 )
 
@@ -77,7 +73,7 @@ data class ExchangeRequest(
 data class ExchangeResponse(
     val message: String,
     val status: String,
-    val current_balance: Int?,
+    val current_balance: Int?, // Saldo terbaru setelah dipotong
     val data: ExchangeData?
 )
 
@@ -120,17 +116,25 @@ data class ListEdukasiResponse(
 
 // --- MODEL AUTH & FCM ---
 data class LoginRequest(val username: String, val password: String)
+
 data class LoginResponse(
     val message: String,
     val token: String?,
     val user: UserDataLogin?
 )
-data class UserDataLogin(val id: Int, val username: String, val total_poin_user: Int)
+
+data class UserDataLogin(
+    val id: Int,
+    val username: String,
+    val total_poin_user: Int // Penting untuk tampilan saldo real-time
+)
 
 data class FCMRequest(val token: String)
 
+// --- INTERFACE API SERVICE ---
 interface ApiService {
 
+    // --- AUTHENTICATION ---
     @POST("api/login")
     fun login(@Body request: LoginRequest): Call<LoginResponse>
 
@@ -139,6 +143,8 @@ interface ApiService {
         @Header("Authorization") token: String
     ): Call<UserProfileResponse>
 
+    // --- FIREBASE CLOUD MESSAGING ---
+    // Digunakan oleh Admin untuk mendaftarkan token agar menerima notifikasi Exchange
     @PUT("api/update-fcm-token")
     fun updateFCMToken(
         @Header("Authorization") token: String,
@@ -183,13 +189,14 @@ interface ApiService {
     fun getLaporanHistory(@Header("Authorization") token: String): Call<ListSampahResponse>
 
     // --- MODUL EXCHANGE / REWARD ---
+    // Endpoint ini yang memicu notifikasi ke Admin di backend
     @POST("api/exchange")
     fun createExchange(
         @Header("Authorization") token: String,
         @Body request: ExchangeRequest
     ): Call<ExchangeResponse>
 
-    // --- MODUL EDUKASI ---
+    // --- MODUL EDUKASI (NEWS) ---
     @POST("api/edukasi")
     fun createEdukasi(@Header("Authorization") token: String, @Body request: EdukasiRequest): Call<EdukasiResponse>
 

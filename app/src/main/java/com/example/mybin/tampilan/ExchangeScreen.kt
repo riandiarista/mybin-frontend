@@ -31,23 +31,22 @@ fun ExchangeScreen(navController: NavController, viewModel: SetoranViewModel) {
     var phoneNumber by remember { mutableStateOf("") }
     var inputPoin by remember { mutableStateOf("") }
 
-    // State untuk Popup Laporan Exchange
+    // State untuk Popup Hasil Exchange
     var showResultDialog by remember { mutableStateOf(false) }
     var resultMessage by remember { mutableStateOf("") }
     var isSuccess by remember { mutableStateOf(false) }
 
-    // PERUBAHAN TAHAP 3: Sinkronisasi saldo langsung dari Tabel User (Profile)
-    // Kita tidak lagi memanggil loadLaporanHistory untuk menghitung koin secara manual
+    // SINKRONISASI AWAL: Memastikan saldo poin user diambil langsung dari data profil terbaru di database [cite: 18]
     LaunchedEffect(Unit) {
         viewModel.loadUserBalance()
     }
 
-    // Mengambil state saldo real-time dari ViewModel
+    // Mengambil state saldo real-time dari ViewModel [cite: 18]
     val totalPoinTersedia = viewModel.totalPoinUser
     val amountToExchange = inputPoin.toIntOrNull() ?: 0
     val minimalTukar = 1000
 
-    // Validasi tombol: Nomor HP cukup, poin minimal terpenuhi, dan tidak melebihi saldo
+    // Validasi Kelayakan Transaksi: Cek panjang nomor HP, poin minimal, dan kecukupan saldo [cite: 18]
     val isEligible = phoneNumber.length >= 10 &&
             amountToExchange >= minimalTukar &&
             amountToExchange <= totalPoinTersedia
@@ -68,11 +67,12 @@ fun ExchangeScreen(navController: NavController, viewModel: SetoranViewModel) {
             Button(
                 onClick = {
                     if (isEligible) {
+                        // Memanggil fungsi submit yang memicu API POST /api/exchange [cite: 18, 19]
                         viewModel.submitExchange(
                             amountPoin = amountToExchange,
                             phoneNumber = phoneNumber,
                             onSuccess = { message, newBalance ->
-                                // UI otomatis update karena totalPoinUser di ViewModel sudah diperbarui
+                                // Backend memproses sebagai 'Success' dan memicu notifikasi ke Admin
                                 resultMessage = message
                                 isSuccess = true
                                 showResultDialog = true
@@ -110,7 +110,7 @@ fun ExchangeScreen(navController: NavController, viewModel: SetoranViewModel) {
                 .background(Color.White)
                 .padding(16.dp)
         ) {
-            // Card Saldo Poin Real-time
+            // --- CARD SALDO POIN REAL-TIME --- [cite: 18]
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -118,7 +118,7 @@ fun ExchangeScreen(navController: NavController, viewModel: SetoranViewModel) {
                 elevation = CardDefaults.cardElevation(2.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Total Poin:", fontSize = 14.sp, color = Color.Gray)
+                    Text("Total Poin Anda:", fontSize = 14.sp, color = Color.Gray)
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Stars, contentDescription = "Points", tint = Color(0xFFFFC107), modifier = Modifier.size(28.dp))
@@ -135,7 +135,7 @@ fun ExchangeScreen(navController: NavController, viewModel: SetoranViewModel) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Input Nomor HP
+            // --- INPUT NOMOR HP GOPAY --- [cite: 18]
             Text("Nomor HP Akun GoPay", fontWeight = FontWeight.Bold, color = Color.DarkGray)
             OutlinedTextField(
                 value = phoneNumber,
@@ -152,7 +152,7 @@ fun ExchangeScreen(navController: NavController, viewModel: SetoranViewModel) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Input Jumlah Poin yang akan ditukar
+            // --- INPUT JUMLAH POIN --- [cite: 18]
             Text("Jumlah Poin yang Ditukar", fontWeight = FontWeight.Bold, color = Color.DarkGray)
             OutlinedTextField(
                 value = inputPoin,
@@ -170,7 +170,7 @@ fun ExchangeScreen(navController: NavController, viewModel: SetoranViewModel) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Rincian Konversi (Perayaan 1:1)
+            // --- RINCIAN ESTIMASI PENCAIRAN (Rate 1:1) --- [cite: 18, 19]
             Text("Rincian Penukaran (1 Poin = Rp 1)", fontWeight = FontWeight.Bold, color = Color.DarkGray)
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -187,18 +187,10 @@ fun ExchangeScreen(navController: NavController, viewModel: SetoranViewModel) {
                             fontSize = 18.sp
                         )
                     }
-                    if (isSuccess) {
-                        Divider(color = Color.LightGray)
-                        Text(
-                            text = "Saldo setelah penukaran: Rp ${String.format("%,d", totalPoinTersedia - amountToExchange)}",
-                            fontSize = 12.sp,
-                            color = Color.Gray
-                        )
-                    }
                 }
             }
 
-            // Pesan Validasi
+            // --- FEEDBACK VALIDASI SALDO --- [cite: 18]
             if (totalPoinTersedia < minimalTukar) {
                 Text(
                     text = "Poin Anda belum cukup (Min. 1.000)",
@@ -219,7 +211,7 @@ fun ExchangeScreen(navController: NavController, viewModel: SetoranViewModel) {
         }
     }
 
-    // --- POPUP LAPORAN EXCHANGE (DIALOG) ---
+    // --- DIALOG HASIL TRANSAKSI BERHASIL --- [cite: 18, 19]
     if (showResultDialog) {
         AlertDialog(
             onDismissRequest = { showResultDialog = false },
@@ -243,7 +235,12 @@ fun ExchangeScreen(navController: NavController, viewModel: SetoranViewModel) {
                     Text(resultMessage, textAlign = TextAlign.Center)
                     if (isSuccess) {
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("Poin Anda telah dipotong langsung dari tabel User.", fontSize = 12.sp, color = Color.Gray)
+                        Text(
+                            "Status penukaran: BERHASIL. Notifikasi sukses telah dikirim ke Admin.",
+                            fontSize = 12.sp,
+                            color = Color.Gray,
+                            textAlign = TextAlign.Center
+                        )
                     }
                 }
             },
@@ -252,7 +249,7 @@ fun ExchangeScreen(navController: NavController, viewModel: SetoranViewModel) {
                     onClick = {
                         showResultDialog = false
                         if (isSuccess) {
-                            // Saldo totalPoinUser sudah terupdate otomatis di ViewModel
+                            // Saldo totalPoinUser sudah terupdate otomatis di ViewModel dari current_balance backend [cite: 18, 19]
                             navController.popBackStack()
                         }
                     }
