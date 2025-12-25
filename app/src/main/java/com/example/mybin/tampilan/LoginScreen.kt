@@ -29,8 +29,8 @@ import com.example.mybin.network.ApiClient
 import com.example.mybin.network.LoginRequest
 import com.example.mybin.network.LoginResponse
 import com.example.mybin.network.AuthTokenManager
-import com.example.mybin.network.FCMRequest // Import model FCMRequest
-import com.google.firebase.messaging.FirebaseMessaging // Import Firebase
+import com.example.mybin.network.FCMRequest
+import com.google.firebase.messaging.FirebaseMessaging
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -160,13 +160,16 @@ fun LoginScreen(navController: NavController) {
                                 AuthTokenManager.authToken = token
                                 AuthTokenManager.saveToken(context, token)
 
-                                // 2. KIRIM FCM TOKEN KE DATABASE (SINKRONISASI)
+                                // 2. SIMPAN USERNAME (PENTING untuk filter UI Superbin)
+                                // Gunakan trim().lowercase() untuk konsistensi pengecekan
+                                AuthTokenManager.saveUsername(context, username.trim().lowercase())
+
+                                // 3. KIRIM FCM TOKEN KE DATABASE
                                 FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
                                     if (task.isSuccessful) {
                                         val fcmToken = task.result
                                         Log.d("FCM_SYNC", "Mencoba sinkron token: $fcmToken")
 
-                                        // Panggil endpoint PUT api/update-fcm-token
                                         ApiClient.instance.updateFCMToken("Bearer $token", FCMRequest(fcmToken))
                                             .enqueue(object : Callback<Void> {
                                                 override fun onResponse(call: Call<Void>, response: Response<Void>) {
@@ -187,7 +190,7 @@ fun LoginScreen(navController: NavController) {
                             isLoading = false
                             Toast.makeText(context, "Login Berhasil", Toast.LENGTH_SHORT).show()
 
-                            // NAVIGASI ROLE
+                            // NAVIGASI BERDASARKAN ROLE
                             if (username.trim().lowercase() == "superbin") {
                                 navController.navigate("HomeAdmin") {
                                     popUpTo("LoginScreen") { inclusive = true }

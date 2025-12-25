@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -44,9 +45,12 @@ import java.util.Locale
 
 @Composable
 fun NewsScreen(navController: NavController, viewModel: BeritaViewModel) {
-    // TAMBAHAN: Memicu fetch data saat layar dibuka
+    val context = LocalContext.current
+
+    // TAMBAHAN: Memicu fetch data dan muat data user login saat layar dibuka
     LaunchedEffect(Unit) {
         viewModel.fetchBerita()
+        viewModel.loadCurrentUser(context) // Memastikan username terdeteksi
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -115,6 +119,7 @@ private fun Header() {
 private fun Body(navController: NavController, viewModel: BeritaViewModel) {
     val beritaList by viewModel.beritaList
     val isLoading by viewModel.isLoading
+    val currentUsername by viewModel.currentUsername // Ambil username dari ViewModel
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -203,15 +208,18 @@ private fun Body(navController: NavController, viewModel: BeritaViewModel) {
             Spacer(modifier = Modifier.height(80.dp))
         }
 
-        FloatingActionButton(
-            onClick = { navController.navigate("berita_anda_screen") },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp),
-            shape = CircleShape,
-            containerColor = Color(0xFF4CAF50)
-        ) {
-            Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color.White)
+        // LOGIKA PERBAIKAN: Tombol Floating hanya muncul jika user BUKAN "superbin"
+        if (currentUsername != "superbin") {
+            FloatingActionButton(
+                onClick = { navController.navigate("berita_anda_screen") },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp),
+                shape = CircleShape,
+                containerColor = Color(0xFF4CAF50)
+            ) {
+                Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color.White)
+            }
         }
     }
 }
@@ -295,7 +303,6 @@ private fun NewsItem(imageRes: Int, title: String, source: String, date: String,
     }
 }
 
-// PREVIEW TETAP ADA DISINI
 @Preview(showBackground = true)
 @Composable
 fun NewsScreenPreview() {

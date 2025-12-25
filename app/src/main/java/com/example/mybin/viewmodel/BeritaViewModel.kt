@@ -1,14 +1,11 @@
 package com.example.mybin.viewmodel
 
+import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
-import com.example.mybin.network.ApiClient
-import com.example.mybin.network.EdukasiData
-import com.example.mybin.network.EdukasiRequest
-import com.example.mybin.network.EdukasiResponse
-import com.example.mybin.network.ListEdukasiResponse
+import com.example.mybin.network.*
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -21,12 +18,24 @@ class BeritaViewModel : ViewModel() {
     private val _isLoading = mutableStateOf(false)
     val isLoading: State<Boolean> = _isLoading
 
-    // PERBAIKAN: Inisialisasi otomatis agar data muncul saat NewsScreen dibuka
+    // --- TAMBAHAN UNTUK ROLE CHECK ---
+    private val _currentUsername = mutableStateOf<String?>(null)
+    val currentUsername: State<String?> = _currentUsername
+
     init {
         fetchBerita()
     }
 
-    // PERBAIKAN: Parameter token dihilangkan agar bisa diakses secara publik oleh NewsScreen
+    /**
+     * Memuat username dari AuthTokenManager ke dalam State ViewModel
+     */
+    fun loadCurrentUser(context: Context) {
+        _currentUsername.value = AuthTokenManager.getUsername(context)
+        Log.d("BeritaViewModel", "User loaded: ${_currentUsername.value}")
+    }
+
+    // --- KODE CRUD BERITA ---
+
     fun fetchBerita() {
         _isLoading.value = true
         ApiClient.instance.getEdukasi().enqueue(object : Callback<ListEdukasiResponse> {
@@ -62,7 +71,6 @@ class BeritaViewModel : ViewModel() {
             override fun onResponse(call: Call<EdukasiResponse>, response: Response<EdukasiResponse>) {
                 _isLoading.value = false
                 if (response.isSuccessful) {
-                    // Refresh list tanpa token
                     fetchBerita()
                     onResult(true, "Berita berhasil diterbitkan!")
                 } else {
