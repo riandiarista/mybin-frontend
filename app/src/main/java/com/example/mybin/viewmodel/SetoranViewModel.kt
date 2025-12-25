@@ -133,6 +133,7 @@ class SetoranViewModel : ViewModel() {
     /**
      * loadLaporanHistory: Menampilkan riwayat penyetoran.
      * Menggunakan data snapshot agar riwayat koin dan jenis tetap akurat.
+     * PERBAIKAN: Sekarang menyertakan status 'selesai' DAN 'ditolak'.
      */
     fun loadLaporanHistory(onError: (String) -> Unit) {
         val token = AuthTokenManager.authToken ?: return
@@ -144,7 +145,8 @@ class SetoranViewModel : ViewModel() {
                     if (response.isSuccessful) {
                         _laporanList.clear()
                         val remoteData = response.body()?.data ?: emptyList()
-                        remoteData.filter { it.status.equals("selesai", true) }.forEach { item ->
+                        // PERBAIKAN: Menambahkan kondisi 'ditolak' pada filter agar data muncul di LaporanScreen
+                        remoteData.filter { it.status.equals("selesai", true) || it.status.equals("ditolak", true) }.forEach { item ->
                             _laporanList.add(
                                 SetoranData(
                                     id = item.id.toString(),
