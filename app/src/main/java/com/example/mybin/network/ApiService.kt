@@ -144,7 +144,7 @@ interface ApiService {
     ): Call<UserProfileResponse>
 
     // --- FIREBASE CLOUD MESSAGING ---
-    // Digunakan oleh Admin untuk mendaftarkan token agar menerima notifikasi Exchange
+    // Endpoint ini wajib dipanggil saat superbin login untuk menerima notifikasi
     @PUT("api/update-fcm-token")
     fun updateFCMToken(
         @Header("Authorization") token: String,
@@ -165,6 +165,7 @@ interface ApiService {
     fun deleteSampah(@Path("id") id: String, @Header("Authorization") token: String): Call<SampahResponse>
 
     // --- MODUL SETORAN ---
+    // Endpoint ini yang akan memicu pengiriman notifikasi ke superbin di sisi backend
     @POST("api/setoran")
     fun createSetoran(@Header("Authorization") token: String, @Body request: SetoranRequest): Call<SetoranResponse>
 
@@ -189,7 +190,6 @@ interface ApiService {
     fun getLaporanHistory(@Header("Authorization") token: String): Call<ListSampahResponse>
 
     // --- MODUL EXCHANGE / REWARD ---
-    // Endpoint ini yang memicu notifikasi ke Admin di backend
     @POST("api/exchange")
     fun createExchange(
         @Header("Authorization") token: String,

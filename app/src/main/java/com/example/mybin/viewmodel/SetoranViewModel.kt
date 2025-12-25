@@ -133,7 +133,6 @@ class SetoranViewModel : ViewModel() {
     /**
      * loadLaporanHistory: Menampilkan riwayat penyetoran.
      * Menggunakan data snapshot agar riwayat koin dan jenis tetap akurat.
-     * PERBAIKAN: Sekarang menyertakan status 'selesai' DAN 'ditolak'.
      */
     fun loadLaporanHistory(onError: (String) -> Unit) {
         val token = AuthTokenManager.authToken ?: return
@@ -145,7 +144,6 @@ class SetoranViewModel : ViewModel() {
                     if (response.isSuccessful) {
                         _laporanList.clear()
                         val remoteData = response.body()?.data ?: emptyList()
-                        // PERBAIKAN: Menambahkan kondisi 'ditolak' pada filter agar data muncul di LaporanScreen
                         remoteData.filter { it.status.equals("selesai", true) || it.status.equals("ditolak", true) }.forEach { item ->
                             _laporanList.add(
                                 SetoranData(
@@ -188,6 +186,10 @@ class SetoranViewModel : ViewModel() {
         }
     }
 
+    /**
+     * submitSetoran: Mengirimkan data setoran ke server.
+     * Panggilan ke endpoint ini akan memicu notifikasi FCM ke superbin di backend.
+     */
     fun submitSetoran(sampahIds: String, totalKoin: Int, lokasi: String, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
         val token = AuthTokenManager.authToken ?: return
         isLoading = true

@@ -119,21 +119,22 @@ fun AddAddressScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Fitur Dropdown Ringkasan Sampah (Original)
+            // Fitur Dropdown Ringkasan Sampah
             RingkasanSampahDropdown(selectedSampahList)
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Card Estimasi Poin (Original)
+            // Card Estimasi Poin
             totalKoin?.let { EstimasiPointsCard(it) }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Tombol Submit
+            // Tombol Submit: Bagian krusial yang memicu Notifikasi ke Superbin
             Button(
                 onClick = {
                     if (hariTanggal.isNotEmpty() && jam.isNotEmpty() && address.isNotEmpty() && !sampahIds.isNullOrEmpty()) {
                         isSubmitting = true
+                        // Memanggil submitSetoran di ViewModel
                         setoranViewModel.submitSetoran(
                             sampahIds = sampahIds,
                             totalKoin = totalKoin ?: 0,
@@ -141,6 +142,7 @@ fun AddAddressScreen(
                             onSuccess = { message ->
                                 isSubmitting = false
                                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                                // Navigasi ke Riwayat/Data Setoran
                                 navController.navigate("DataSetoranScreen") { popUpTo("MainPage") { inclusive = false } }
                             },
                             onError = { error ->
