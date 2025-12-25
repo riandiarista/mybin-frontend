@@ -62,6 +62,7 @@ fun PilihSetoranScreen(navController: NavController, sampahViewModel: SampahView
     val sampahList = sampahViewModel.sampahList
     val checkedState = remember { mutableStateListOf<Boolean>() }
 
+    // Sinkronisasi state checkbox dengan jumlah data sampah yang tersedia
     LaunchedEffect(sampahList.size) {
         checkedState.clear()
         checkedState.addAll(List(sampahList.size) { false })
@@ -90,10 +91,19 @@ fun PilihSetoranScreen(navController: NavController, sampahViewModel: SampahView
         },
         bottomBar = {
             Button(
-                onClick = { 
-                    val selectedIds = sampahList.filterIndexed { index, _ -> checkedState[index] }.joinToString(",") { it.id }
-                    val totalKoin = sampahList.filterIndexed { index, _ -> checkedState[index] }.sumOf { it.estimasiKoin }
-                    navController.navigate("AddAddressScreen?sampahIds=$selectedIds&totalKoin=$totalKoin") 
+                onClick = {
+                    // Menggabungkan ID sampah yang dipilih menjadi satu string (kolektif)
+                    val selectedIds = sampahList.filterIndexed { index, _ -> checkedState[index] }
+                        .joinToString(",") { it.id }
+
+                    // Menjumlahkan seluruh estimasi koin dari sampah yang dipilih
+                    val totalKoin = sampahList.filterIndexed { index, _ -> checkedState[index] }
+                        .sumOf { it.estimasiKoin }
+
+                    // Mengirimkan data kolektif ke layar penentuan alamat dan jadwal
+                    if (selectedIds.isNotEmpty()) {
+                        navController.navigate("AddAddressScreen?sampahIds=$selectedIds&totalKoin=$totalKoin")
+                    }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -155,12 +165,14 @@ fun PilihSetoranScreen(navController: NavController, sampahViewModel: SampahView
 
 @Composable
 fun PilihSetoranItem(item: SampahData, isChecked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    // Definisi warna berdasarkan kategori sampah untuk visualisasi
     val jenisColor = when (item.jenisSampah) {
         "Anorganik" -> Color(0xFF4CAF50)
         "Organik" -> Color.Green
         "B3" -> Color.Red
         else -> Color.Gray
     }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -177,6 +189,8 @@ fun PilihSetoranItem(item: SampahData, isChecked: Boolean, onCheckedChange: (Boo
                 colors = CheckboxDefaults.colors(checkedColor = Color(0xFF4CAF50))
             )
             Spacer(modifier = Modifier.width(8.dp))
+
+            // Penampilan gambar sampah (Base64 atau Placeholder)
             if (item.imageUri != null) {
                 Image(
                     painter = rememberAsyncImagePainter(item.imageUri),
@@ -195,12 +209,14 @@ fun PilihSetoranItem(item: SampahData, isChecked: Boolean, onCheckedChange: (Boo
                         .clip(CircleShape)
                 )
             }
+
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = item.jenisSampah, color = jenisColor, fontSize = 12.sp)
                 Text(text = item.detailSampah, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 Text(text = item.totalBobot, color = Color.Gray, fontSize = 14.sp)
             }
+
             Spacer(modifier = Modifier.width(16.dp))
             Column(horizontalAlignment = Alignment.End) {
                 Text(text = "Koin", fontSize = 12.sp, color = Color.Gray)

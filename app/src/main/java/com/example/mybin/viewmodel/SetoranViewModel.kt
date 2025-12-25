@@ -44,7 +44,8 @@ class SetoranViewModel : ViewModel() {
 
     /**
      * getSetoran: Mengambil data setoran aktif.
-     * Menggunakan item.total_koin agar tidak 0 setelah Hard Delete.
+     * Menggunakan item.total_koin agar nilai koin tetap muncul meskipun
+     * data sampah asli sudah di-Hard Delete oleh backend.
      */
     fun getSetoran() {
         val token = AuthTokenManager.authToken ?: return
@@ -63,10 +64,11 @@ class SetoranViewModel : ViewModel() {
                                 SetoranData(
                                     id = item.id.toString(),
                                     tanggal = "Sedang Proses",
-                                    jenis = item.sampah?.jenis ?: "Sampah Terverifikasi",
+                                    // Karena setoran kolektif, jenis sampah asli mungkin null
+                                    jenis = item.sampah?.jenis ?: "Setoran Kolektif",
                                     lokasi = item.lokasi ?: "Lokasi Penjemputan",
                                     status = item.status ?: "menunggu",
-                                    // Ambil dari total_koin (snapshot)
+                                    // Mengambil nilai akumulasi koin dari snapshot database
                                     totalKoin = item.total_koin ?: item.sampah?.coin ?: 0,
                                     namaUser = item.user?.username ?: "Pengguna"
                                 )
@@ -123,8 +125,8 @@ class SetoranViewModel : ViewModel() {
     }
 
     /**
-     * PERBAIKAN: loadLaporanHistory
-     * Memperbaiki pemetaan totalKoin agar tidak tampil 0 pada layar Riwayat.
+     * loadLaporanHistory: Menampilkan riwayat penyetoran yang sudah selesai.
+     * Dipastikan membaca total_koin snapshot agar riwayat koin akurat.
      */
     fun loadLaporanHistory(onError: (String) -> Unit) {
         val token = AuthTokenManager.authToken ?: return
@@ -140,11 +142,11 @@ class SetoranViewModel : ViewModel() {
                                 SetoranData(
                                     id = item.id.toString(),
                                     tanggal = "Terverifikasi",
-                                    jenis = item.sampah?.jenis ?: item.jenis ?: "Sampah",
+                                    jenis = item.sampah?.jenis ?: item.jenis ?: "Sampah Kolektif",
                                     lokasi = "-",
                                     status = item.status ?: "pending",
-                                    // PERBAIKAN: Cek field koin pada berbagai kemungkinan level JSON
-                                    totalKoin = item.coin ?: item.total_koin ?: item.sampah?.coin ?: 0,
+                                    // Memastikan koin gabungan tampil di layar laporan
+                                    totalKoin = item.total_koin ?: item.coin ?: item.sampah?.coin ?: 0,
                                     namaUser = item.user?.username ?: "Pengguna"
                                 )
                             )
@@ -176,17 +178,29 @@ class SetoranViewModel : ViewModel() {
         }
     }
 
+    /**
+     * submitSetoran: Mengirimkan daftar ID sampah dan total koin sebagai satu kesatuan.
+     * Tidak menggunakan looping agar backend memprosesnya sebagai satu baris setoran kolektif.
+     */
     fun submitSetoran(sampahIds: String, totalKoin: Int, lokasi: String, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
         val token = AuthTokenManager.authToken ?: return
         isLoading = true
         viewModelScope.launch(Dispatchers.IO) {
-            ApiClient.instance.createSetoran("Bearer $token", SetoranRequest(sampahIds, totalKoin, lokasi)).enqueue(object : Callback<SetoranResponse> {
+            val request = SetoranRequest(sampahIds, totalKoin, lokasi) // Mengirim sampahIds gabungan
+            ApiClient.instance.createSetoran("Bearer $token", request).enqueue(object : Callback<SetoranResponse> {
                 override fun onResponse(call: Call<SetoranResponse>, response: Response<SetoranResponse>) {
                     isLoading = false
-                    if (response.isSuccessful) { getSetoran(); onSuccess(response.body()?.message ?: "Berhasil!") }
-                    else onError("Gagal memproses")
+                    if (response.isSuccessful) {
+                        getSetoran()
+                        onSuccess(response.body()?.message ?: "Berhasil!")
+                    } else {
+                        onError("Gagal memproses setoran")
+                    }
                 }
-                override fun onFailure(call: Call<SetoranResponse>, t: Throwable) { isLoading = false }
+                override fun onFailure(call: Call<SetoranResponse>, t: Throwable) {
+                    isLoading = false
+                    onError("Kesalahan koneksi: ${t.message}")
+                }
             })
         }
     }

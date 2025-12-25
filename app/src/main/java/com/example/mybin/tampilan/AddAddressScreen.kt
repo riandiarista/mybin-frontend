@@ -23,14 +23,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.example.mybin.model.SampahData
-import com.example.mybin.ui.theme.MyBinTheme
 import com.example.mybin.viewmodel.SampahViewModel
 import com.example.mybin.viewmodel.SetoranViewModel
 import java.util.Calendar
@@ -40,7 +37,7 @@ import java.util.Calendar
 fun AddAddressScreen(
     navController: NavController,
     sampahViewModel: SampahViewModel = viewModel(),
-    setoranViewModel: SetoranViewModel = viewModel(), // Dipastikan tidak null
+    setoranViewModel: SetoranViewModel = viewModel(),
     sampahIds: String?,
     totalKoin: Int?
 ) {
@@ -52,31 +49,29 @@ fun AddAddressScreen(
 
     val context = LocalContext.current
     val calendar = Calendar.getInstance()
-
-    // Indikator Loading untuk tombol
     var isSubmitting by remember { mutableStateOf(false) }
 
+    // Dialog Pemilih Tanggal
     val datePickerDialog = DatePickerDialog(
         context,
-        { _, year, month, dayOfMonth ->
-            hariTanggal = "$dayOfMonth/${month + 1}/$year"
-        },
+        { _, year, month, dayOfMonth -> hariTanggal = "$dayOfMonth/${month + 1}/$year" },
         calendar.get(Calendar.YEAR),
         calendar.get(Calendar.MONTH),
         calendar.get(Calendar.DAY_OF_MONTH)
     )
 
+    // Dialog Pemilih Jam
     val timePickerDialog = TimePickerDialog(
         context,
-        { _, hour, minute ->
-            jam = String.format("%02d:%02d", hour, minute)
-        },
+        { _, hour, minute -> jam = String.format("%02d:%02d", hour, minute) },
         calendar.get(Calendar.HOUR_OF_DAY),
         calendar.get(Calendar.MINUTE),
         true
     )
 
+    // Load data sampah untuk ringkasan dropdown
     LaunchedEffect(sampahIds) {
+        selectedSampahList.clear()
         sampahIds?.split(",")?.forEach { id ->
             sampahViewModel.getSampahById(id)?.let { selectedSampahList.add(it) }
         }
@@ -85,24 +80,15 @@ fun AddAddressScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Text(
-                        "Add Address",
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
+                title = { Text("Konfirmasi Setoran", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
                     }
                 },
-                actions = { Spacer(modifier = Modifier.width(48.dp)) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                actions = { Spacer(modifier = Modifier.width(48.dp)) }
             )
-        },
-        containerColor = Color(0xFFF8F8F8)
+        }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -112,6 +98,8 @@ fun AddAddressScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             Spacer(modifier = Modifier.height(8.dp))
+
+            // Card Input Informasi
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -120,26 +108,32 @@ fun AddAddressScreen(
             ) {
                 Column(modifier = Modifier.padding(vertical = 8.dp)) {
                     PickerInfoRow(icon = Icons.Default.DateRange, label = "Hari & Tanggal", value = hariTanggal, onClick = { datePickerDialog.show() })
-                    HorizontalDivider(color = Color.LightGray.copy(alpha = 0.4f), thickness = 1.dp, modifier = Modifier.padding(horizontal = 16.dp))
-                    PickerInfoRow(icon = Icons.Default.AccessTime, label = "Jam", value = jam, onClick = { timePickerDialog.show() })
-                    HorizontalDivider(color = Color.LightGray.copy(alpha = 0.4f), thickness = 1.dp, modifier = Modifier.padding(horizontal = 16.dp))
-                    InfoRow(icon = Icons.Default.Phone, label = "Phone number", value = phoneNumber, onValueChange = { phoneNumber = it })
-                    HorizontalDivider(color = Color.LightGray.copy(alpha = 0.4f), thickness = 1.dp, modifier = Modifier.padding(horizontal = 16.dp))
-                    InfoRow(icon = Icons.Default.LocationOn, label = "Address", value = address, onValueChange = { address = it })
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color.LightGray.copy(alpha = 0.4f))
+                    PickerInfoRow(icon = Icons.Default.AccessTime, label = "Jam Penjemputan", value = jam, onClick = { timePickerDialog.show() })
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color.LightGray.copy(alpha = 0.4f))
+                    InfoRow(icon = Icons.Default.Phone, label = "Nomor Telepon", value = phoneNumber, onValueChange = { phoneNumber = it })
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color.LightGray.copy(alpha = 0.4f))
+                    InfoRow(icon = Icons.Default.LocationOn, label = "Alamat Lengkap", value = address, onValueChange = { address = it })
                 }
             }
-            Spacer(modifier = Modifier.height(24.dp))
-            RingkasanSampahDropdown(selectedSampahList)
-            Spacer(modifier = Modifier.height(24.dp))
-            totalKoin?.let { EstimasiPointsCard(it) }
+
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Fitur Dropdown Ringkasan Sampah (Original)
+            RingkasanSampahDropdown(selectedSampahList)
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Card Estimasi Poin (Original)
+            totalKoin?.let { EstimasiPointsCard(it) }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Tombol Submit
             Button(
                 onClick = {
                     if (hariTanggal.isNotEmpty() && jam.isNotEmpty() && address.isNotEmpty() && !sampahIds.isNullOrEmpty()) {
                         isSubmitting = true
-
-                        // Memanggil fungsi submitSetoran di ViewModel sesuai langkah-langkah
                         setoranViewModel.submitSetoran(
                             sampahIds = sampahIds,
                             totalKoin = totalKoin ?: 0,
@@ -147,16 +141,7 @@ fun AddAddressScreen(
                             onSuccess = { message ->
                                 isSubmitting = false
                                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-
-                                // Memuat ulang data sampah agar list sampah yang sudah disetor hilang dari database lokal
-                                sampahViewModel.loadSampah(
-                                    onSuccess = {
-                                        navController.navigate("DataSetoranScreen") {
-                                            popUpTo("DataSetoranScreen") { inclusive = true }
-                                        }
-                                    },
-                                    onError = { /* Error refresh diabaikan tetap pindah */ }
-                                )
+                                navController.navigate("DataSetoranScreen") { popUpTo("MainPage") { inclusive = false } }
                             },
                             onError = { error ->
                                 isSubmitting = false
@@ -164,45 +149,34 @@ fun AddAddressScreen(
                             }
                         )
                     } else {
-                        Toast.makeText(context, "Lengkapi semua data dan pilih sampah", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Mohon lengkapi semua data", Toast.LENGTH_SHORT).show()
                     }
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
+                modifier = Modifier.fillMaxWidth().height(56.dp),
                 enabled = !isSubmitting,
                 shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB3F5B3))
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
             ) {
                 if (isSubmitting) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color(0xFF1F4B1F))
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
                 } else {
-                    Text("Selesai", color = Color(0xFF1F4B1F), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text("Selesai & Setorkan", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
 
-// ... Fungsi Row, TextField, Dropdown, dan Card di bawah tetap sama ...
-// (Hanya ganti Divider menjadi HorizontalDivider untuk kompatibilitas Material3 terbaru)
-
 @Composable
 private fun PickerInfoRow(icon: ImageVector, label: String, value: String, onClick: () -> Unit) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(16.dp),
+        modifier = Modifier.fillMaxWidth().clickable { onClick() }.padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = label, tint = Color.Gray)
+        Icon(icon, contentDescription = null, tint = Color.Gray)
         Spacer(modifier = Modifier.width(16.dp))
-        Text(
-            text = value.ifEmpty { label },
-            color = if (value.isEmpty()) Color.Gray else Color.Black
-        )
+        Text(text = value.ifEmpty { label }, color = if (value.isEmpty()) Color.Gray else Color.Black)
     }
 }
 
@@ -218,8 +192,7 @@ private fun InfoRow(icon: ImageVector, label: String, value: String, onValueChan
             unfocusedContainerColor = Color.Transparent,
             focusedContainerColor = Color.Transparent,
             unfocusedIndicatorColor = Color.Transparent,
-            focusedIndicatorColor = Color.Transparent,
-            cursorColor = MaterialTheme.colorScheme.primary
+            focusedIndicatorColor = Color.Transparent
         ),
         singleLine = true
     )
@@ -228,7 +201,6 @@ private fun InfoRow(icon: ImageVector, label: String, value: String, onValueChan
 @Composable
 private fun RingkasanSampahDropdown(selectedSampahList: List<SampahData>) {
     var expanded by remember { mutableStateOf(false) }
-
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -237,71 +209,24 @@ private fun RingkasanSampahDropdown(selectedSampahList: List<SampahData>) {
     ) {
         Column {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
+                modifier = Modifier.fillMaxWidth().padding(16.dp).clickable { expanded = !expanded },
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Language, contentDescription = "Ringkasan Sampah", tint = Color.Gray)
+                    Icon(Icons.Default.List, contentDescription = null, tint = Color.Gray)
                     Spacer(modifier = Modifier.width(16.dp))
-                    Text("Ringkasan Sampah", color = Color.Gray, fontSize = 16.sp)
+                    Text("Ringkasan Sampah (${selectedSampahList.size})", color = Color.Gray)
                 }
-                IconButton(onClick = { expanded = !expanded }) {
-                    Icon(if (expanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown, contentDescription = "Dropdown", tint = Color.Gray)
-                }
+                Icon(if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, contentDescription = null)
             }
             if (expanded) {
                 selectedSampahList.forEach { sampah ->
-                    SampahItem(
-                        category = sampah.jenisSampah,
-                        name = sampah.detailSampah,
-                        weight = sampah.totalBobot
-                    )
+                    Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                        Text("• ${sampah.jenisSampah}: ${sampah.detailSampah} (${sampah.totalBobot})", fontSize = 14.sp)
+                    }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SampahItem(category: String, name: String, weight: String) {
-    val (icon, backgroundColor, iconColor) = when (category) {
-        "Anorganik" -> Triple(Icons.Default.Eco, Color(0xFFE6F8F0), Color(0xFF2EBD70))
-        "Organik" -> Triple(Icons.Default.Spa, Color(0xFFFFF0F5), Color.Magenta.copy(alpha = 0.7f))
-        else -> Triple(Icons.Default.Warning, Color.LightGray, Color.Black)
-    }
-
-    Card(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(backgroundColor),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = name,
-                    modifier = Modifier.size(32.dp),
-                    tint = iconColor
-                )
-            }
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(category, fontSize = 12.sp, color = iconColor)
-                Text(name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Text(weight, fontSize = 14.sp, color = Color.Gray)
+                Spacer(modifier = Modifier.height(8.dp))
             }
         }
     }
@@ -312,37 +237,14 @@ private fun EstimasiPointsCard(totalKoin: Int) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9))
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(Color(0xFFC8E6C9), Color(0xFFA5D6A7).copy(alpha = 0.8f))
-                    )
-                )
-                .padding(vertical = 24.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Estimasi Points:", color = Color(0xFF1B5E20))
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.MonetizationOn,
-                        contentDescription = "Points",
-                        tint = Color(0xFFF9A825),
-                        modifier = Modifier.size(36.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = totalKoin.toString(),
-                        fontSize = 36.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color(0xFF1B5E20)
-                    )
-                }
+        Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("Total Estimasi Poin", color = Color(0xFF2E7D32))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.MonetizationOn, contentDescription = null, tint = Color(0xFFF9A825), modifier = Modifier.size(32.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = totalKoin.toString(), fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
             }
         }
     }
