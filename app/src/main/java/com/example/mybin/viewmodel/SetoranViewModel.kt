@@ -16,6 +16,7 @@ import retrofit2.Callback
 import retrofit2.Response
 
 class SetoranViewModel : ViewModel() {
+    // List untuk tampilan utama dan laporan tetap menggunakan SetoranData (UI Model)
     private val _setoranList = mutableStateListOf<SetoranData>()
     val setoranList: List<SetoranData> get() = _setoranList
 
@@ -31,7 +32,7 @@ class SetoranViewModel : ViewModel() {
     val filteredLaporanList: List<SetoranData>
         get() = _laporanList.filter { item ->
             val matchesStatus = if (filterStatus == "Semua") true else item.status.equals(filterStatus, ignoreCase = true)
-            val matchesJenis = if (filterJenis == "Semua") true else item.jenis.equals(filterJenis, ignoreCase = true)
+            val matchesJenis = if (filterJenis == "Semua") true else item.jenis.contains(filterJenis, ignoreCase = true)
             matchesStatus && matchesJenis
         }
 
@@ -44,8 +45,8 @@ class SetoranViewModel : ViewModel() {
 
     /**
      * getSetoran: Mengambil data setoran aktif.
-     * Menggunakan item.total_koin agar nilai koin tetap muncul meskipun
-     * data sampah asli sudah di-Hard Delete oleh backend.
+     * Menggunakan data snapshot (detail_*) agar informasi tetap muncul
+     * setelah data sampah asli di-hard delete.
      */
     fun getSetoran() {
         val token = AuthTokenManager.authToken ?: return
@@ -63,20 +64,25 @@ class SetoranViewModel : ViewModel() {
                             _setoranList.add(
                                 SetoranData(
                                     id = item.id.toString(),
-                                    tanggal = "Sedang Proses",
-                                    // Karena setoran kolektif, jenis sampah asli mungkin null
-                                    jenis = item.sampah?.jenis ?: "Setoran Kolektif",
+                                    tanggal = item.tanggal ?: "Sedang Proses",
+                                    // PRIORITAS: Ambil dari detail_jenis (snapshot) jika sampahId null
+                                    jenis = item.detail_jenis ?: item.sampah?.jenis ?: "Setoran Kolektif",
                                     lokasi = item.lokasi ?: "Lokasi Penjemputan",
                                     status = item.status ?: "menunggu",
-                                    // Mengambil nilai akumulasi koin dari snapshot database
-                                    totalKoin = item.total_koin ?: item.sampah?.coin ?: 0,
-                                    namaUser = item.user?.username ?: "Pengguna"
+                                    totalKoin = item.total_koin ?: 0,
+                                    namaUser = item.user?.username ?: "Pengguna",
+                                    // MENANGKAP SNAPSHOT FOTO DAN BERAT
+                                    detailFoto = item.detail_foto,
+                                    detailBerat = item.detail_berat ?: 0f
                                 )
                             )
                         }
                     }
                 }
-                override fun onFailure(call: Call<SetoranResponse>, t: Throwable) { isLoading = false }
+                override fun onFailure(call: Call<SetoranResponse>, t: Throwable) {
+                    isLoading = false
+                    Log.e("SetoranVM", "Gagal fetch setoran: ${t.message}")
+                }
             })
         }
     }
@@ -125,36 +131,38 @@ class SetoranViewModel : ViewModel() {
     }
 
     /**
-     * loadLaporanHistory: Menampilkan riwayat penyetoran yang sudah selesai.
-     * Dipastikan membaca total_koin snapshot agar riwayat koin akurat.
+     * loadLaporanHistory: Menampilkan riwayat penyetoran.
+     * Menggunakan data snapshot agar riwayat koin dan jenis tetap akurat.
      */
     fun loadLaporanHistory(onError: (String) -> Unit) {
         val token = AuthTokenManager.authToken ?: return
         isLoading = true
         viewModelScope.launch(Dispatchers.IO) {
-            ApiClient.instance.getLaporanHistory("Bearer $token").enqueue(object : Callback<ListSampahResponse> {
-                override fun onResponse(call: Call<ListSampahResponse>, response: Response<ListSampahResponse>) {
+            ApiClient.instance.getSetoran("Bearer $token").enqueue(object : Callback<SetoranResponse> {
+                override fun onResponse(call: Call<SetoranResponse>, response: Response<SetoranResponse>) {
                     isLoading = false
                     if (response.isSuccessful) {
                         _laporanList.clear()
-                        response.body()?.data?.forEach { item ->
+                        val remoteData = response.body()?.data ?: emptyList()
+                        remoteData.filter { it.status.equals("selesai", true) }.forEach { item ->
                             _laporanList.add(
                                 SetoranData(
                                     id = item.id.toString(),
-                                    tanggal = "Terverifikasi",
-                                    jenis = item.sampah?.jenis ?: item.jenis ?: "Sampah Kolektif",
-                                    lokasi = "-",
-                                    status = item.status ?: "pending",
-                                    // Memastikan koin gabungan tampil di layar laporan
-                                    totalKoin = item.total_koin ?: item.coin ?: item.sampah?.coin ?: 0,
-                                    namaUser = item.user?.username ?: "Pengguna"
+                                    tanggal = item.tanggal ?: "Terverifikasi",
+                                    jenis = item.detail_jenis ?: item.sampah?.jenis ?: "Sampah Kolektif",
+                                    lokasi = item.lokasi ?: "-",
+                                    status = item.status ?: "selesai",
+                                    totalKoin = item.total_koin ?: 0,
+                                    namaUser = item.user?.username ?: "Pengguna",
+                                    detailFoto = item.detail_foto,
+                                    detailBerat = item.detail_berat ?: 0f
                                 )
                             )
                         }
                         loadUserBalance()
                     }
                 }
-                override fun onFailure(call: Call<ListSampahResponse>, t: Throwable) { isLoading = false }
+                override fun onFailure(call: Call<SetoranResponse>, t: Throwable) { isLoading = false }
             })
         }
     }
@@ -178,15 +186,11 @@ class SetoranViewModel : ViewModel() {
         }
     }
 
-    /**
-     * submitSetoran: Mengirimkan daftar ID sampah dan total koin sebagai satu kesatuan.
-     * Tidak menggunakan looping agar backend memprosesnya sebagai satu baris setoran kolektif.
-     */
     fun submitSetoran(sampahIds: String, totalKoin: Int, lokasi: String, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
         val token = AuthTokenManager.authToken ?: return
         isLoading = true
         viewModelScope.launch(Dispatchers.IO) {
-            val request = SetoranRequest(sampahIds, totalKoin, lokasi) // Mengirim sampahIds gabungan
+            val request = SetoranRequest(sampahIds, totalKoin, lokasi)
             ApiClient.instance.createSetoran("Bearer $token", request).enqueue(object : Callback<SetoranResponse> {
                 override fun onResponse(call: Call<SetoranResponse>, response: Response<SetoranResponse>) {
                     isLoading = false
