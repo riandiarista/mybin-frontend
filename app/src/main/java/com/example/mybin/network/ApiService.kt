@@ -15,15 +15,15 @@ data class Sampah(
     val detail: String?,
     val coin: Int?,
     val status: String?,
-    // Sinkronisasi gambar Base64 dari DB [cite: 19]
+    // Sinkronisasi gambar Base64 dari DB
     val foto: String?,
     val sampah: SampahNestedDetail? = null,
-    // Menambahkan field user agar ViewModel bisa membaca objek user (username) dari backend [cite: 81]
+    // Menambahkan field user agar ViewModel bisa membaca objek user (username) dari backend
     val user: UserDataLogin? = null,
     /**
      * PENAMBAHAN UNTUK RIWAYAT: total_koin
      * Digunakan agar fungsi loadLaporanHistory di ViewModel dapat membaca
-     * koin snapshot dari database[cite: 63].
+     * koin snapshot dari database.
      */
     val total_koin: Int? = 0
 )
@@ -42,7 +42,7 @@ data class ListSampahResponse(
 /**
  * PERBAIKAN: SetoranRequest
  * sampahIds dikirim sebagai String (misal: "1,2,3") agar diproses
- * sebagai satu setoran kolektif di backend[cite: 36, 81].
+ * sebagai satu setoran kolektif di backend.
  */
 data class SetoranRequest(
     val sampahIds: String,
@@ -53,7 +53,7 @@ data class SetoranRequest(
 data class SetoranResponse(
     val message: String,
     val total_data: Int?,
-    // Menggunakan SetoranItem agar data user pengirim ikut terbawa [cite: 81, 85]
+    // Menggunakan SetoranItem agar data user pengirim ikut terbawa
     val data: List<SetoranItem>?
 )
 
@@ -66,7 +66,7 @@ data class SetoranItem(
     val tanggal: String?,
     val status: String?,
     /**
-     * Snapshot koin dari kolom baru di tabel setorans[cite: 63, 85].
+     * Snapshot koin dari kolom baru di tabel setorans.
      * Ini mencegah nilai koin tampil 0 setelah data sampah asli dihapus.
      */
     val total_koin: Int?,
@@ -74,7 +74,7 @@ data class SetoranItem(
     val user: UserDataLogin?
 )
 
-// Model untuk request update status verifikasi oleh Admin [cite: 40, 81]
+// Model untuk request update status verifikasi oleh Admin
 data class UpdateStatusRequest(
     val status: String
 )
@@ -137,7 +137,12 @@ data class LoginResponse(
     val user: UserDataLogin?
 )
 data class UserDataLogin(val id: Int, val username: String, val total_poin_user: Int)
-data class FCMRequest(val fcm_token: String)
+
+/**
+ * Model untuk sinkronisasi Token FCM ke Backend.
+ * Menggunakan field 'token' agar cocok dengan req.body.token di Node.js
+ */
+data class FCMRequest(val token: String)
 
 interface ApiService {
 
@@ -149,10 +154,17 @@ interface ApiService {
         @Header("Authorization") token: String
     ): Call<UserProfileResponse>
 
-    @POST("api/auth/update-fcm")
-    fun updateFCMToken(@Header("Authorization") token: String, @Body request: FCMRequest): Call<Void>
+    /**
+     * Update FCM Token untuk notifikasi.
+     * Menggunakan PUT karena ini adalah operasi pembaruan data di database.
+     */
+    @PUT("api/update-fcm-token")
+    fun updateFCMToken(
+        @Header("Authorization") token: String,
+        @Body request: FCMRequest
+    ): Call<Void>
 
-    // --- MODUL SAMPAH (PJ: Riandi Arista M.) [cite: 80] ---
+    // --- MODUL SAMPAH (PJ: Riandi Arista M.) ---
     @POST("api/sampah")
     fun createSampah(@Header("Authorization") token: String, @Body request: SampahRequest): Call<SampahResponse>
 
@@ -165,7 +177,7 @@ interface ApiService {
     @DELETE("api/sampah/{id}")
     fun deleteSampah(@Path("id") id: String, @Header("Authorization") token: String): Call<SampahResponse>
 
-    // --- MODUL SETORAN (PJ: M. Riski Fahrezi) [cite: 81] ---
+    // --- MODUL SETORAN (PJ: M. Riski Fahrezi) ---
     @POST("api/setoran")
     fun createSetoran(@Header("Authorization") token: String, @Body request: SetoranRequest): Call<SetoranResponse>
 
@@ -178,7 +190,7 @@ interface ApiService {
         @Header("Authorization") token: String
     ): Call<SetoranResponse>
 
-    // Endpoint untuk Admin mengubah status verifikasi (Selesai/Ditolak) [cite: 81]
+    // Endpoint untuk Admin mengubah status verifikasi (Selesai/Ditolak)
     @PUT("api/setoran/status/{id}")
     fun updateStatusSetoran(
         @Path("id") id: Int,
@@ -186,18 +198,18 @@ interface ApiService {
         @Body request: UpdateStatusRequest
     ): Call<Void>
 
-    // --- MODUL LAPORAN & HISTORY (PJ: Naufal Hakim Z.) [cite: 85] ---
+    // --- MODUL LAPORAN & HISTORY (PJ: Naufal Hakim Z.) ---
     @GET("api/laporan/history")
     fun getLaporanHistory(@Header("Authorization") token: String): Call<ListSampahResponse>
 
-    // --- MODUL EXCHANGE / REWARD (PJ: Naufal Hakim Z.) [cite: 85] ---
+    // --- MODUL EXCHANGE / REWARD (PJ: Naufal Hakim Z.) ---
     @POST("api/exchange")
     fun createExchange(
         @Header("Authorization") token: String,
         @Body request: ExchangeRequest
     ): Call<ExchangeResponse>
 
-    // --- MODUL EDUKASI (PJ: Rizka Putri A.) [cite: 84] ---
+    // --- MODUL EDUKASI (PJ: Rizka Putri A.) ---
     @POST("api/edukasi")
     fun createEdukasi(@Header("Authorization") token: String, @Body request: EdukasiRequest): Call<EdukasiResponse>
 

@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -16,44 +17,24 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.mybin.tampilan.AddAddressScreen
-import com.example.mybin.tampilan.BeritaAndaScreen
-import com.example.mybin.tampilan.BuatBeritaScreen
-import com.example.mybin.tampilan.DataSetoranScreen
-import com.example.mybin.tampilan.DetailSampahScreen
-import com.example.mybin.tampilan.EditSampahScreen
-import com.example.mybin.tampilan.ExchangeScreen
-import com.example.mybin.tampilan.LaporanScreen
-import com.example.mybin.tampilan.LoginScreen
-import com.example.mybin.tampilan.MainPage
-import com.example.mybin.tampilan.NewsDetailScreen
-import com.example.mybin.tampilan.NewsScreen
-import com.example.mybin.tampilan.NotifikasiScreen
-import com.example.mybin.tampilan.OnboardingScreen
-import com.example.mybin.tampilan.PengaturanAkunScreen
-import com.example.mybin.tampilan.PilihJenisSampahScreen
-import com.example.mybin.tampilan.PilihSetoranScreen
-import com.example.mybin.tampilan.ProfileScreen
-import com.example.mybin.tampilan.RecycleScreen
-import com.example.mybin.tampilan.SampahkuScreen
-import com.example.mybin.tampilan.HomeAdmin
-import com.example.mybin.tampilan.VerifikasiSampahScreen
+import com.example.mybin.tampilan.*
 import com.example.mybin.ui.theme.MyBinTheme
 import com.example.mybin.viewmodel.BeritaViewModel
 import com.example.mybin.viewmodel.SampahViewModel
 import com.example.mybin.viewmodel.SetoranViewModel
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.GoogleApiAvailability
+import com.google.firebase.messaging.FirebaseMessaging
 
 class MainActivity : ComponentActivity() {
 
-    // Registrasi request permission handler
+    // Registrasi request permission handler untuk notifikasi
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         if (isGranted) {
-            // Izin diberikan
             Toast.makeText(this, "Notifikasi aktif", Toast.LENGTH_SHORT).show()
         } else {
-            // Izin ditolak
             Toast.makeText(this, "Notifikasi tidak akan muncul", Toast.LENGTH_LONG).show()
         }
     }
@@ -62,8 +43,14 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Panggil fungsi cek izin saat aplikasi dibuka
+        // 1. Cek izin notifikasi saat aplikasi dibuka (Android 13+)
         askNotificationPermission()
+
+        // 2. Cek Ketersediaan Google Play Services (Syarat wajib FCM)
+        checkPlayServices()
+
+        // 3. Ambil Token FCM untuk verifikasi di Logcat
+        fetchFcmToken()
 
         setContent {
             MyBinTheme {
@@ -73,31 +60,19 @@ class MainActivity : ComponentActivity() {
                 val setoranViewModel: SetoranViewModel = viewModel()
 
                 NavHost(navController = navController, startDestination = "OnboardingScreen") {
-                    composable("OnboardingScreen") {
-                        OnboardingScreen(navController)
-                    }
-                    composable("LoginScreen") {
-                        LoginScreen(navController)
-                    }
+                    // --- AUTH & ONBOARDING ---
+                    composable("OnboardingScreen") { OnboardingScreen(navController) }
+                    composable("LoginScreen") { LoginScreen(navController) }
 
-                    // --- ROUTE ADMIN ---
-                    composable("HomeAdmin") {
-                        HomeAdmin(navController)
-                    }
+                    // --- ROLE ADMIN ---
+                    composable("HomeAdmin") { HomeAdmin(navController) }
+                    composable("VerifikasiSampahScreen") { VerifikasiSampahScreen(navController) }
 
-                    composable("VerifikasiSampahScreen") {
-                        VerifikasiSampahScreen(navController)
-                    }
+                    // --- DASHBOARD & TRANSAKSI ---
+                    composable("MainPage") { MainPage(navController, setoranViewModel) }
+                    composable("LaporanScreen") { LaporanScreen(navController, setoranViewModel) }
+                    composable("DataSetoranScreen") { DataSetoranScreen(navController, setoranViewModel) }
 
-                    composable("MainPage") {
-                        MainPage(navController, setoranViewModel)
-                    }
-                    composable("LaporanScreen") {
-                        LaporanScreen(navController, setoranViewModel)
-                    }
-                    composable("DataSetoranScreen") {
-                        DataSetoranScreen(navController, setoranViewModel)
-                    }
                     composable(
                         "AddAddressScreen?sampahIds={sampahIds}&totalKoin={totalKoin}",
                         arguments = listOf(
@@ -113,11 +88,10 @@ class MainActivity : ComponentActivity() {
                             totalKoin = backStackEntry.arguments?.getInt("totalKoin")
                         )
                     }
-                    composable("NewsScreen") {
-                        NewsScreen(navController, beritaViewModel)
-                    }
 
-                    // PENYELARASAN: Pastikan rute detail menggunakan format yang konsisten
+                    // --- EDUKASI & NEWS ---
+                    composable("NewsScreen") { NewsScreen(navController, beritaViewModel) }
+
                     composable(
                         "news_detail_screen?beritaId={beritaId}",
                         arguments = listOf(navArgument("beritaId") {
@@ -130,57 +104,38 @@ class MainActivity : ComponentActivity() {
                         NewsDetailScreen(navController, beritaViewModel, beritaId)
                     }
 
-                    composable("berita_anda_screen") {
-                        BeritaAndaScreen(navController, beritaViewModel)
-                    }
+                    composable("berita_anda_screen") { BeritaAndaScreen(navController, beritaViewModel) }
+                    composable("buat_berita_screen") { BuatBeritaScreen(navController, beritaViewModel) }
 
-                    composable("buat_berita_screen") {
-                        BuatBeritaScreen(navController, beritaViewModel)
-                    }
-
-                    // PERBAIKAN: Rute khusus untuk Edit Berita agar ID terkirim dengan benar ke BuatBeritaScreen
                     composable(
                         "edit_berita_screen/{beritaId}",
                         arguments = listOf(navArgument("beritaId") { type = NavType.StringType })
                     ) { backStackEntry ->
                         val beritaId = backStackEntry.arguments?.getString("beritaId")
-                        // Memanggil BuatBeritaScreen dengan beritaId untuk mode EDIT
                         BuatBeritaScreen(navController, beritaViewModel, beritaId)
                     }
 
-                    composable("notifikasi_screen") {
-                        NotifikasiScreen(navController)
-                    }
-                    composable("profile_screen") {
-                        ProfileScreen(navController)
-                    }
-                    composable("pengaturan_akun_screen") {
-                        PengaturanAkunScreen(navController)
-                    }
-                    composable("pilih_setoran_screen") {
-                        PilihSetoranScreen(navController, sampahViewModel)
-                    }
+                    // --- SETTINGS & PROFILE ---
+                    composable("notifikasi_screen") { NotifikasiScreen(navController) }
+                    composable("profile_screen") { ProfileScreen(navController) }
+                    composable("pengaturan_akun_screen") { PengaturanAkunScreen(navController) }
+
+                    // --- MANAJEMEN SAMPAH ---
+                    composable("pilih_setoran_screen") { PilihSetoranScreen(navController, sampahViewModel) }
+
                     composable(
                         "edit_sampah_screen/{sampahId}",
-                        arguments = listOf(
-                            navArgument("sampahId") { type = NavType.StringType }
-                        )
+                        arguments = listOf(navArgument("sampahId") { type = NavType.StringType })
                     ) { backStackEntry ->
                         val sampahId = backStackEntry.arguments?.getString("sampahId")
                         if (sampahId != null) {
-                            EditSampahScreen(
-                                navController,
-                                sampahId,
-                                sampahViewModel
-                            )
+                            EditSampahScreen(navController, sampahId, sampahViewModel)
                         }
                     }
-                    composable("RecycleScreen") {
-                        RecycleScreen(navController)
-                    }
-                    composable("PilihJenisSampahScreen") {
-                        PilihJenisSampahScreen(navController)
-                    }
+
+                    composable("RecycleScreen") { RecycleScreen(navController) }
+                    composable("PilihJenisSampahScreen") { PilihJenisSampahScreen(navController) }
+
                     composable(
                         "DetailSampahScreen/{jenisSampah}/{harga}",
                         arguments = listOf(
@@ -192,14 +147,44 @@ class MainActivity : ComponentActivity() {
                         val harga = it.arguments?.getString("harga") ?: ""
                         DetailSampahScreen(navController, jenisSampah, harga, sampahViewModel)
                     }
-                    composable("SampahkuScreen") {
-                        SampahkuScreen(navController, sampahViewModel)
-                    }
-                    composable("ExchangeScreen") {
-                        ExchangeScreen(navController, setoranViewModel)
-                    }
+
+                    composable("SampahkuScreen") { SampahkuScreen(navController, sampahViewModel) }
+                    composable("ExchangeScreen") { ExchangeScreen(navController, setoranViewModel) }
                 }
             }
+        }
+    }
+
+    /**
+     * Memeriksa ketersediaan Google Play Services di perangkat.
+     */
+    private fun checkPlayServices() {
+        val availability = GoogleApiAvailability.getInstance()
+        val resultCode = availability.isGooglePlayServicesAvailable(this)
+
+        if (resultCode != ConnectionResult.SUCCESS) {
+            Log.e("FCM_CHECK", "Google Play Services tidak tersedia")
+            if (availability.isUserResolvableError(resultCode)) {
+                availability.getErrorDialog(this, resultCode, 9000)?.show()
+            } else {
+                Toast.makeText(this, "Perangkat ini tidak mendukung Google Play Services", Toast.LENGTH_LONG).show()
+            }
+        } else {
+            Log.d("FCM_CHECK", "Google Play Services aktif")
+        }
+    }
+
+    /**
+     * Mengambil Token FCM untuk verifikasi di Logcat
+     */
+    private fun fetchFcmToken() {
+        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            if (!task.isSuccessful) {
+                Log.w("FCM_DEBUG", "Gagal mengambil token", task.exception)
+                return@addOnCompleteListener
+            }
+            val token = task.result
+            Log.d("FCM_DEBUG", "FCM Token: $token")
         }
     }
 

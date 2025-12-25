@@ -1,5 +1,6 @@
 package com.example.mybin.tampilan
 
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -20,17 +21,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.example.mybin.R
 import com.example.mybin.network.ApiClient
 import com.example.mybin.network.LoginRequest
 import com.example.mybin.network.LoginResponse
 import com.example.mybin.network.AuthTokenManager
-import com.example.mybin.ui.theme.MyBinTheme
+import com.example.mybin.network.FCMRequest // Import model FCMRequest
+import com.google.firebase.messaging.FirebaseMessaging // Import Firebase
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -151,18 +151,43 @@ fun LoginScreen(navController: NavController) {
 
                 ApiClient.instance.login(loginRequest).enqueue(object : Callback<LoginResponse> {
                     override fun onResponse(call: Call<LoginResponse>, response: Response<LoginResponse>) {
-                        isLoading = false
                         if (response.isSuccessful) {
                             val responseBody = response.body()
                             val token = responseBody?.token
 
                             if (token != null) {
+                                // 1. Simpan Token JWT
                                 AuthTokenManager.authToken = token
+                                AuthTokenManager.saveToken(context, token)
+
+                                // 2. KIRIM FCM TOKEN KE DATABASE (SINKRONISASI)
+                                FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                                    if (task.isSuccessful) {
+                                        val fcmToken = task.result
+                                        Log.d("FCM_SYNC", "Mencoba sinkron token: $fcmToken")
+
+                                        // Panggil endpoint PUT api/update-fcm-token
+                                        ApiClient.instance.updateFCMToken("Bearer $token", FCMRequest(fcmToken))
+                                            .enqueue(object : Callback<Void> {
+                                                override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                                                    if (response.isSuccessful) {
+                                                        Log.d("FCM_SYNC", "✅ Token berhasil masuk database")
+                                                    } else {
+                                                        Log.e("FCM_SYNC", "❌ Gagal: ${response.code()}")
+                                                    }
+                                                }
+                                                override fun onFailure(call: Call<Void>, t: Throwable) {
+                                                    Log.e("FCM_SYNC", "❌ Error koneksi API: ${t.message}")
+                                                }
+                                            })
+                                    }
+                                }
                             }
 
+                            isLoading = false
                             Toast.makeText(context, "Login Berhasil", Toast.LENGTH_SHORT).show()
 
-                            // LOGIKA NAVIGASI ROLE BERDASARKAN USERNAME
+                            // NAVIGASI ROLE
                             if (username.trim().lowercase() == "superbin") {
                                 navController.navigate("HomeAdmin") {
                                     popUpTo("LoginScreen") { inclusive = true }
@@ -173,6 +198,7 @@ fun LoginScreen(navController: NavController) {
                                 }
                             }
                         } else {
+                            isLoading = false
                             loginError = "Login Gagal: Username atau Password salah"
                         }
                     }
