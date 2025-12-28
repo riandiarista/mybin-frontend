@@ -33,10 +33,7 @@ import androidx.navigation.NavController
 import com.example.mybin.model.SetoranData
 import com.example.mybin.viewmodel.SetoranViewModel
 
-/**
- * Fungsi helper untuk mendekode string Base64 dari database menjadi Bitmap Android.
- *
- */
+
 fun decodeBase64ToBitmap(base64Str: String?): Bitmap? {
     if (base64Str.isNullOrEmpty()) return null
     return try {
@@ -55,7 +52,7 @@ fun DataSetoranScreen(navController: NavController, setoranViewModel: SetoranVie
     var showDeleteDialog by remember { mutableStateOf(false) }
     var selectedSetoranId by remember { mutableStateOf<String?>(null) }
 
-    // Memuat data saat layar dibuka
+    
     LaunchedEffect(Unit) {
         setoranViewModel.getSetoran()
     }
@@ -156,7 +153,7 @@ fun SetoranItem(setoran: SetoranData, onDeleteClick: () -> Unit) {
     val chipColor = if (isPending) Color(0xFFFFFBE6) else Color(0xFFD7F5E6)
     val chipContentColor = if (isPending) Color(0xFFF0AD4E) else Color(0xFF2EBD70)
 
-    // Mengambil foto dari data snapshot
+    
     val bitmap = remember(setoran.detailFoto) {
         decodeBase64ToBitmap(setoran.detailFoto)
     }
@@ -177,7 +174,7 @@ fun SetoranItem(setoran: SetoranData, onDeleteClick: () -> Unit) {
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Menampilkan gambar snapshot jika tersedia
+                    
                     if (bitmap != null) {
                         Image(
                             bitmap = bitmap.asImageBitmap(),

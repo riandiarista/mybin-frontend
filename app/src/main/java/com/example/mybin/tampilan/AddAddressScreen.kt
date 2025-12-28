@@ -51,7 +51,7 @@ fun AddAddressScreen(
     val calendar = Calendar.getInstance()
     var isSubmitting by remember { mutableStateOf(false) }
 
-    // Dialog Pemilih Tanggal
+    
     val datePickerDialog = DatePickerDialog(
         context,
         { _, year, month, dayOfMonth -> hariTanggal = "$dayOfMonth/${month + 1}/$year" },
@@ -60,7 +60,7 @@ fun AddAddressScreen(
         calendar.get(Calendar.DAY_OF_MONTH)
     )
 
-    // Dialog Pemilih Jam
+    
     val timePickerDialog = TimePickerDialog(
         context,
         { _, hour, minute -> jam = String.format("%02d:%02d", hour, minute) },
@@ -69,7 +69,7 @@ fun AddAddressScreen(
         true
     )
 
-    // Load data sampah untuk ringkasan dropdown
+    
     LaunchedEffect(sampahIds) {
         selectedSampahList.clear()
         sampahIds?.split(",")?.forEach { id ->
@@ -99,7 +99,7 @@ fun AddAddressScreen(
         ) {
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Card Input Informasi
+            
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -119,22 +119,22 @@ fun AddAddressScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Fitur Dropdown Ringkasan Sampah
+            
             RingkasanSampahDropdown(selectedSampahList)
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Card Estimasi Poin
+            
             totalKoin?.let { EstimasiPointsCard(it) }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Tombol Submit: Bagian krusial yang memicu Notifikasi ke Superbin
+            
             Button(
                 onClick = {
                     if (hariTanggal.isNotEmpty() && jam.isNotEmpty() && address.isNotEmpty() && !sampahIds.isNullOrEmpty()) {
                         isSubmitting = true
-                        // Memanggil submitSetoran di ViewModel
+                        
                         setoranViewModel.submitSetoran(
                             sampahIds = sampahIds,
                             totalKoin = totalKoin ?: 0,
@@ -142,7 +142,7 @@ fun AddAddressScreen(
                             onSuccess = { message ->
                                 isSubmitting = false
                                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-                                // Navigasi ke Riwayat/Data Setoran
+                                
                                 navController.navigate("DataSetoranScreen") { popUpTo("MainPage") { inclusive = false } }
                             },
                             onError = { error ->
