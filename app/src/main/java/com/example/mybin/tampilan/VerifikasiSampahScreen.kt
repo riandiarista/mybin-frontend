@@ -28,22 +28,22 @@ fun VerifikasiSampahScreen(
     navController: NavController,
     setoranViewModel: SetoranViewModel = viewModel()
 ) {
-    // Refresh data setiap kali layar dibuka
+
     LaunchedEffect(Unit) {
         setoranViewModel.fetchSetoran()
     }
 
-    // State untuk SearchBar
+
     var searchQuery by remember { mutableStateOf("") }
 
-    // Mengamati list setoran dari ViewModel
+
     val setoranList = setoranViewModel.setoranList
 
-    // FILTER LOGIC: Menggunakan derivedStateOf agar filter dihitung ulang hanya saat list atau query berubah
+
     val filteredList by remember(setoranList, searchQuery) {
         derivedStateOf {
             setoranList.filter { setoran ->
-                // Hanya tampilkan yang berstatus menunggu atau diproses
+
                 val matchesStatus = setoran.status.equals("menunggu", ignoreCase = true) ||
                         setoran.status.equals("Diproses", ignoreCase = true)
 
@@ -76,7 +76,7 @@ fun VerifikasiSampahScreen(
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp)
         ) {
-            // --- SEARCH BAR ---
+
             Spacer(modifier = Modifier.height(16.dp))
             OutlinedTextField(
                 value = searchQuery,
@@ -96,7 +96,7 @@ fun VerifikasiSampahScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Tampilkan Loading Indicator jika sedang mengambil data
+
             if (setoranViewModel.isLoading && setoranList.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = Color(0xFF2EBD70))
@@ -118,7 +118,7 @@ fun VerifikasiSampahScreen(
                         VerifikasiSetoranItem(
                             setoran = setoran,
                             onApprove = {
-                                // Memanggil fungsi updateStatus di ViewModel
+
                                 setoranViewModel.updateStatus(setoran.id, "selesai")
                             },
                             onReject = {

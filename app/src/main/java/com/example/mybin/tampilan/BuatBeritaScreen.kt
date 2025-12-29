@@ -76,7 +76,7 @@ import java.util.Locale
 @Composable
 fun BuatBeritaScreen(navController: NavController, viewModel: BeritaViewModel, beritaId: String? = null) {
     val context = LocalContext.current
-    // Mengambil token dari SharedPreferences melalui AuthTokenManager
+
     val token = AuthTokenManager.getToken(context) ?: ""
     val isLoading by viewModel.isLoading
 
@@ -140,7 +140,7 @@ fun BuatBeritaScreen(navController: NavController, viewModel: BeritaViewModel, b
                             val imageString = imageUri?.toString()
 
                             if (beritaId == null) {
-                                // MODE TAMBAH (POST)
+
                                 viewModel.addBerita(token, judul, deskripsi, lokasi, imageString) { success, message ->
                                     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                                     if (success) {
@@ -148,8 +148,7 @@ fun BuatBeritaScreen(navController: NavController, viewModel: BeritaViewModel, b
                                     }
                                 }
                             } else {
-                                // PERBAIKAN: MODE EDIT (PUT)
-                                // Memanggil fungsi updateBerita yang sudah kita buat di ViewModel
+
                                 viewModel.updateBerita(token, beritaId, judul, deskripsi, lokasi, imageString) { success, message ->
                                     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                                     if (success) {
@@ -163,7 +162,7 @@ fun BuatBeritaScreen(navController: NavController, viewModel: BeritaViewModel, b
                     },
                     onDelete = {
                         if (beritaId != null) {
-                            // SINKRONISASI: Memanggil fungsi deleteBerita jika sedang dalam mode edit
+
                             viewModel.deleteBerita(token, beritaId) { success, message ->
                                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                                 if (success) {

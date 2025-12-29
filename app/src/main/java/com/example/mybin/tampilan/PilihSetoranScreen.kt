@@ -62,7 +62,7 @@ fun PilihSetoranScreen(navController: NavController, sampahViewModel: SampahView
     val sampahList = sampahViewModel.sampahList
     val checkedState = remember { mutableStateListOf<Boolean>() }
 
-    // Sinkronisasi state checkbox dengan jumlah data sampah yang tersedia
+
     LaunchedEffect(sampahList.size) {
         checkedState.clear()
         checkedState.addAll(List(sampahList.size) { false })
@@ -92,15 +92,15 @@ fun PilihSetoranScreen(navController: NavController, sampahViewModel: SampahView
         bottomBar = {
             Button(
                 onClick = {
-                    // Menggabungkan ID sampah yang dipilih menjadi satu string (kolektif)
+
                     val selectedIds = sampahList.filterIndexed { index, _ -> checkedState[index] }
                         .joinToString(",") { it.id }
 
-                    // Menjumlahkan seluruh estimasi koin dari sampah yang dipilih
+
                     val totalKoin = sampahList.filterIndexed { index, _ -> checkedState[index] }
                         .sumOf { it.estimasiKoin }
 
-                    // Mengirimkan data kolektif ke layar penentuan alamat dan jadwal
+
                     if (selectedIds.isNotEmpty()) {
                         navController.navigate("AddAddressScreen?sampahIds=$selectedIds&totalKoin=$totalKoin")
                     }
@@ -165,7 +165,7 @@ fun PilihSetoranScreen(navController: NavController, sampahViewModel: SampahView
 
 @Composable
 fun PilihSetoranItem(item: SampahData, isChecked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    // Definisi warna berdasarkan kategori sampah untuk visualisasi
+
     val jenisColor = when (item.jenisSampah) {
         "Anorganik" -> Color(0xFF4CAF50)
         "Organik" -> Color.Green
@@ -190,7 +190,7 @@ fun PilihSetoranItem(item: SampahData, isChecked: Boolean, onCheckedChange: (Boo
             )
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Penampilan gambar sampah (Base64 atau Placeholder)
+
             if (item.imageUri != null) {
                 Image(
                     painter = rememberAsyncImagePainter(item.imageUri),

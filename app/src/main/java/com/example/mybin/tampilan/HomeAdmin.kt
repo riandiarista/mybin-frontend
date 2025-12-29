@@ -25,7 +25,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.mybin.R
 
-// Color Palette
+
 private val PrimaryGreen = Color(0xFF008037)
 private val LightGreen = Color(0xFFD7F5D7)
 private val ScreenBackgroundColor = Color(0xFFF0F4F3)
@@ -39,7 +39,7 @@ fun HomeAdmin(navController: NavController) {
             .fillMaxSize()
             .background(ScreenBackgroundColor)
     ) {
-        // Top Section: Background Image and Welcome Card
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -81,7 +81,7 @@ fun HomeAdmin(navController: NavController) {
             }
         }
 
-        // Menu Section
+
         Box(
             contentAlignment = Alignment.TopCenter,
             modifier = Modifier
@@ -106,7 +106,7 @@ fun HomeAdmin(navController: NavController) {
                 )
                 Spacer(modifier = Modifier.height(45.dp))
 
-                // Tombol Verifikasi Sampah
+
                 MenuButton(
                     text = "Verifikasi\nSampah",
                     imageId = R.drawable.plastic_bottle_icon,
@@ -117,7 +117,7 @@ fun HomeAdmin(navController: NavController) {
 
                 Spacer(modifier = Modifier.height(35.dp))
 
-                // Tombol Berita Terkini
+
                 MenuButton(
                     text = "Berita\nTerkini",
                     imageId = R.drawable.waving_trash_can_icon,

@@ -80,7 +80,7 @@ fun SampahkuScreen(navController: NavController, sampahViewModel: SampahViewMode
     var showDeleteDialog by remember { mutableStateOf(false) }
     var itemToDelete by remember { mutableStateOf<SampahData?>(null) }
 
-    // Memuat data dari API saat layar pertama kali dibuka
+
     LaunchedEffect(Unit) {
         sampahViewModel.loadSampah(
             onSuccess = { message ->
@@ -276,7 +276,7 @@ fun SampahItemCard(item: SampahData, modifier: Modifier = Modifier) {
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // LOGIKA GAMBAR: Konversi Base64 ke ByteArray (Solusi paling stabil)
+
             val imageSource = remember(item.foto, item.imageUri) {
                 val rawFoto = item.foto
                 if (!rawFoto.isNullOrEmpty()) {

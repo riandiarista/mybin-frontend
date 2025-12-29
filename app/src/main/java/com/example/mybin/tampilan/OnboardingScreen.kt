@@ -30,7 +30,7 @@ private class WavyTopShape : Shape {
             val waveHeight = 60.dp.toPx(density)
             moveTo(0f, waveHeight)
 
-            // First wave
+
             quadraticTo(
                 x1 = size.width * 0.25f,
                 y1 = waveHeight + 40.dp.toPx(density),
@@ -38,7 +38,7 @@ private class WavyTopShape : Shape {
                 y2 = waveHeight
             )
 
-            // Second wave
+
             quadraticTo(
                 x1 = size.width * 0.75f,
                 y1 = waveHeight - 40.dp.toPx(density),
@@ -62,7 +62,7 @@ fun OnboardingScreen(navController: NavController) {
     val subtitleColor = Color(0xFF93C5A5)
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Background Image
+
         Image(
             painter = painterResource(id = R.drawable.orang),
             contentDescription = "Background",
@@ -70,7 +70,7 @@ fun OnboardingScreen(navController: NavController) {
             modifier = Modifier.fillMaxSize()
         )
 
-        // Content layered on top
+
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Bottom
@@ -78,13 +78,13 @@ fun OnboardingScreen(navController: NavController) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .fillMaxHeight(0.65f) // Adjusted content height
+                    .fillMaxHeight(0.65f)
                     .graphicsLayer { clip = true; shape = WavyTopShape() }
                     .background(Color.White)
                     .padding(horizontal = 32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Spacer(modifier = Modifier.height(170.dp)) // Adjust spacer for the new wave shape
+                Spacer(modifier = Modifier.height(170.dp))
 
                 Text(
                     text = """Ayo Bergabung
@@ -107,7 +107,7 @@ sampah Peduli masa depan""",
                     lineHeight = 25.sp
                 )
 
-                Spacer(modifier = Modifier.weight(1f)) // Pushes the button to the bottom
+                Spacer(modifier = Modifier.weight(1f))
 
                 Button(
                     onClick = { navController.navigate("LoginScreen") },

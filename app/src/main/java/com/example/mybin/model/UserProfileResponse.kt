@@ -17,7 +17,7 @@ data class UserData(
     @SerializedName("username")
     val username: String,
 
-    // Pastikan nama ini sama dengan yang dikirim backend (total_poin_user)
+
     @SerializedName("total_poin_user")
     val totalPoinUser: Int
 )

@@ -49,7 +49,7 @@ import com.example.mybin.viewmodel.BeritaViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewsDetailScreen(navController: NavController, viewModel: BeritaViewModel? = null, beritaId: String? = null) {
-    // State untuk menampung konten berita
+
     var judul by remember { mutableStateOf("Sampah plastik: Reduce dan Reuse dahulu sebelum Recycle") }
     var deskripsi by remember { mutableStateOf("Indonesia adalah salah satu negara penghasil sampah terbanyak di dunia...") }
     var tanggal by remember { mutableStateOf("22 Juli 2022") }
@@ -62,7 +62,7 @@ fun NewsDetailScreen(navController: NavController, viewModel: BeritaViewModel? =
         if (beritaId != null && viewModel != null) {
             val berita = viewModel.getBeritaById(beritaId)
             if (berita != null) {
-                // SINKRONISASI: Menggunakan judul, deskripsi, createdAt, lokasi, dan cover
+
                 judul = berita.judul
                 deskripsi = berita.deskripsi
                 tanggal = berita.createdAt
@@ -110,7 +110,7 @@ fun NewsDetailScreen(navController: NavController, viewModel: BeritaViewModel? =
                 }
             }
 
-            // Gambar Utama Berita
+
             val painter = if (!imageUri.isNullOrEmpty()) {
                 rememberAsyncImagePainter(model = Uri.parse(imageUri))
             } else {
@@ -130,7 +130,7 @@ fun NewsDetailScreen(navController: NavController, viewModel: BeritaViewModel? =
                 Text(text = lokasi, fontSize = 14.sp, color = Color.Gray)
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Judul Berita
+
                 Text(
                     text = judul,
                     fontWeight = FontWeight.Bold,
@@ -138,14 +138,14 @@ fun NewsDetailScreen(navController: NavController, viewModel: BeritaViewModel? =
                 )
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Deskripsi Berita
+
                 Text(
                     text = deskripsi,
                     fontSize = 16.sp,
                     lineHeight = 24.sp
                 )
 
-                // Jika berita default (statis), tampilkan konten tambahan asli Anda
+
                 if (beritaId == null) {
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(

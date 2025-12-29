@@ -61,7 +61,7 @@ fun RecycleScreen(navController: NavController) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = 80.dp) // Adjusted padding to make space for back button
+                .padding(top = 80.dp)
         ) {
             Header()
             Body(navController)
@@ -125,13 +125,13 @@ private fun Body(navController: NavController) {
         Spacer(modifier = Modifier.height(32.dp))
         RecycleOptionCard(
             text = "Tambahkan Sampah",
-            imageRes = R.drawable.ic_launcher_foreground, // Placeholder
+            imageRes = R.drawable.ic_launcher_foreground,
             onClick = { navController.navigate("PilihJenisSampahScreen") }
         )
         Spacer(modifier = Modifier.height(24.dp))
         RecycleOptionCard(
             text = "Sampah Ku",
-            imageRes = R.drawable.ic_launcher_foreground, // Placeholder
+            imageRes = R.drawable.ic_launcher_foreground,
             onClick = { navController.navigate("SampahkuScreen") } 
         )
     }

@@ -28,7 +28,7 @@ import com.google.firebase.messaging.FirebaseMessaging
 
 class MainActivity : ComponentActivity() {
 
-    // Registrasi request permission handler untuk notifikasi
+
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
@@ -43,13 +43,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // 1. Cek izin notifikasi saat aplikasi dibuka (Android 13+)
+
         askNotificationPermission()
 
-        // 2. Cek Ketersediaan Google Play Services (Syarat wajib FCM)
+
         checkPlayServices()
 
-        // 3. Ambil Token FCM untuk verifikasi di Logcat
+
         fetchFcmToken()
 
         setContent {
@@ -60,15 +60,15 @@ class MainActivity : ComponentActivity() {
                 val setoranViewModel: SetoranViewModel = viewModel()
 
                 NavHost(navController = navController, startDestination = "OnboardingScreen") {
-                    // --- AUTH & ONBOARDING ---
+
                     composable("OnboardingScreen") { OnboardingScreen(navController) }
                     composable("LoginScreen") { LoginScreen(navController) }
 
-                    // --- ROLE ADMIN ---
+
                     composable("HomeAdmin") { HomeAdmin(navController) }
                     composable("VerifikasiSampahScreen") { VerifikasiSampahScreen(navController) }
 
-                    // --- DASHBOARD & TRANSAKSI ---
+
                     composable("MainPage") { MainPage(navController, setoranViewModel) }
                     composable("LaporanScreen") { LaporanScreen(navController, setoranViewModel) }
                     composable("DataSetoranScreen") { DataSetoranScreen(navController, setoranViewModel) }
@@ -89,7 +89,7 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    // --- EDUKASI & NEWS ---
+
                     composable("NewsScreen") { NewsScreen(navController, beritaViewModel) }
 
                     composable(
@@ -115,12 +115,12 @@ class MainActivity : ComponentActivity() {
                         BuatBeritaScreen(navController, beritaViewModel, beritaId)
                     }
 
-                    // --- SETTINGS & PROFILE ---
+
                     composable("notifikasi_screen") { NotifikasiScreen(navController) }
                     composable("profile_screen") { ProfileScreen(navController) }
                     composable("pengaturan_akun_screen") { PengaturanAkunScreen(navController) }
 
-                    // --- MANAJEMEN SAMPAH ---
+
                     composable("pilih_setoran_screen") { PilihSetoranScreen(navController, sampahViewModel) }
 
                     composable(

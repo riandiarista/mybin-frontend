@@ -2,7 +2,7 @@ package com.example.mybin.tampilan
 
 import android.content.Context
 import android.net.Uri
-import android.util.Base64 // Import untuk konversi gambar
+import android.util.Base64
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -69,15 +69,14 @@ import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.launch
 
-// Fungsi Helper untuk konversi URI gambar ke String Base64
+
 fun uriToBase64(context: Context, uri: Uri): String? {
     return try {
         val inputStream = context.contentResolver.openInputStream(uri)
         val bytes = inputStream?.readBytes()
         inputStream?.close()
         if (bytes != null) {
-            // PENTING: Gunakan NO_WRAP agar string tidak terputus oleh karakter baris baru (\n)
-            // Ini memastikan string Base64 utuh saat dikirim ke MySQL
+
             Base64.encodeToString(bytes, Base64.NO_WRAP)
         } else null
     } catch (e: Exception) {
@@ -267,10 +266,10 @@ fun DetailSampahScreen(
                             return@Button
                         }
 
-                        // PROSES KONVERSI: Mengubah URI menjadi string Base64 untuk dikirim ke API
+
                         val base64Image = imageUri?.let { uriToBase64(context, it) }
 
-                        // Logika perhitungan estimasi koin
+
                         val koinPerKg = when (jenisSampah) {
                             "Organik" -> 1000
                             "Anorganik" -> 2000
@@ -279,24 +278,24 @@ fun DetailSampahScreen(
                         }
                         val estimasiKoin = (bobotFloat * koinPerKg).toInt()
 
-                        // 1. Kirim data ke Backend API (Termasuk parameter foto)
+
                         sampahViewModel.saveSampahToApi(
                             jenis = jenisSampah,
                             berat = bobotFloat,
                             detail = detailSampah,
                             coin = estimasiKoin,
-                            foto = base64Image, // Mengirim string Base64 ke server
+                            foto = base64Image,
                             onSuccess = { message ->
                                 scope.launch { snackbarHostState.showSnackbar(message) }
 
-                                // 2. Tambahkan ke list lokal agar UI terupdate seketika
+
                                 val newSampah = SampahData(
                                     jenisSampah = jenisSampah,
                                     detailSampah = detailSampah,
                                     totalBobot = "$totalBobot Kg",
                                     imageUri = imageUri,
                                     estimasiKoin = estimasiKoin,
-                                    foto = base64Image // Disimpan di model lokal untuk tampilan instan
+                                    foto = base64Image
                                 )
                                 sampahViewModel.addSampah(newSampah)
                                 navController.popBackStack()

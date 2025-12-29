@@ -16,12 +16,12 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        // Langsung kirim ke server setiap ada token baru
+
         val sharedPref = getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
         val jwt = sharedPref.getString("token", null)
 
         if (jwt != null) {
-            // LANGSUNG PAKAI INSTANCE
+
             val api = ApiClient.instance
             api.updateFCMToken("Bearer $jwt", FCMRequest(token)).enqueue(object : Callback<Void> {
                 override fun onResponse(call: Call<Void>, response: Response<Void>) {
@@ -34,7 +34,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         super.onMessageReceived(remoteMessage)
-        // Tampilkan notifikasi jika pesan masuk saat aplikasi sedang dibuka
+
         remoteMessage.notification?.let {
             val channelId = "mybin_notif"
             val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

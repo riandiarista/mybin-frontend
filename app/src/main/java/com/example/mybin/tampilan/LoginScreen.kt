@@ -156,15 +156,14 @@ fun LoginScreen(navController: NavController) {
                             val token = responseBody?.token
 
                             if (token != null) {
-                                // 1. Simpan Token JWT
+
                                 AuthTokenManager.authToken = token
                                 AuthTokenManager.saveToken(context, token)
 
-                                // 2. SIMPAN USERNAME (PENTING untuk filter UI Superbin)
-                                // Gunakan trim().lowercase() untuk konsistensi pengecekan
+
                                 AuthTokenManager.saveUsername(context, username.trim().lowercase())
 
-                                // 3. KIRIM FCM TOKEN KE DATABASE
+
                                 FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
                                     if (task.isSuccessful) {
                                         val fcmToken = task.result
@@ -190,7 +189,7 @@ fun LoginScreen(navController: NavController) {
                             isLoading = false
                             Toast.makeText(context, "Login Berhasil", Toast.LENGTH_SHORT).show()
 
-                            // NAVIGASI BERDASARKAN ROLE
+
                             if (username.trim().lowercase() == "superbin") {
                                 navController.navigate("HomeAdmin") {
                                     popUpTo("LoginScreen") { inclusive = true }

@@ -40,9 +40,7 @@ fun MainPage(navController: NavController, viewModel: SetoranViewModel) {
     var menuState by remember { mutableStateOf(MenuState.COLLAPSED) }
     val transition = updateTransition(targetState = menuState, label = "Menu Transition")
 
-    // SINKRONISASI OTOMATIS:
-    // Memanggil saldo langsung dari database saat halaman dibuka.
-    // Ini akan memastikan angka 27.000 muncul secara real-time.
+
     LaunchedEffect(Unit) {
         viewModel.loadUserBalance()
     }
@@ -174,8 +172,7 @@ fun MainPage(navController: NavController, viewModel: SetoranViewModel) {
                         Text("Selection", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = greenColor)
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        // TAMPILAN POIN BERSIH
-                        // Mengambil nilai totalPoinUser dari ViewModel yang sudah di-sinkronkan
+
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Star, contentDescription = "Bin Points", tint = Color(0xFFFFC107), modifier = Modifier.size(24.dp))
                             Spacer(modifier = Modifier.width(8.dp))
@@ -187,7 +184,7 @@ fun MainPage(navController: NavController, viewModel: SetoranViewModel) {
                             )
                         }
 
-                        // TOMBOL REFRESH DIHAPUS UNTUK ESTETIKA YANG LEBIH BERSIH
+
 
                         Spacer(modifier = Modifier.height(24.dp))
 

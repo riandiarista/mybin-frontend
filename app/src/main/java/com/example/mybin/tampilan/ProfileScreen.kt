@@ -74,7 +74,7 @@ fun ProfileScreen(navController: NavController) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
                     }
                 },
-                actions = { Spacer(modifier = Modifier.width(48.dp)) }, // Spacer for centering title
+                actions = { Spacer(modifier = Modifier.width(48.dp)) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         },
@@ -92,7 +92,7 @@ fun ProfileScreen(navController: NavController) {
             Spacer(modifier = Modifier.height(24.dp))
             StatsCard()
             Spacer(modifier = Modifier.height(24.dp))
-            MenuOptions(navController) // Pass NavController
+            MenuOptions(navController)
         }
     }
 }
@@ -102,7 +102,7 @@ private fun ProfileHeader() {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box {
             Image(
-                painter = painterResource(id = R.drawable.introawal), // Replace with your profile image resource
+                painter = painterResource(id = R.drawable.introawal),
                 contentDescription = "Foto Profil",
                 modifier = Modifier
                     .size(120.dp)
@@ -163,7 +163,7 @@ private fun StatItem(icon: ImageVector, value: String, label: String) {
 }
 
 @Composable
-private fun MenuOptions(navController: NavController) { // Accept NavController
+private fun MenuOptions(navController: NavController) {
     var notificationState by remember { mutableStateOf(true) }
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -172,7 +172,7 @@ private fun MenuOptions(navController: NavController) { // Accept NavController
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column {
-            MenuItem(icon = Icons.Default.Person, text = "Pengaturan Akun", onClick = { navController.navigate("pengaturan_akun_screen") }) // Add navigation
+            MenuItem(icon = Icons.Default.Person, text = "Pengaturan Akun", onClick = { navController.navigate("pengaturan_akun_screen") })
             Divider(modifier = Modifier.padding(horizontal = 16.dp))
             MenuSwitchItem(
                 icon = Icons.Default.Notifications,

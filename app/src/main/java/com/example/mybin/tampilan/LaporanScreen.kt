@@ -45,12 +45,12 @@ fun LaporanScreen(navController: NavController, viewModel: SetoranViewModel) {
     var showFilterDialog by remember { mutableStateOf(false) }
     var showExportDialog by remember { mutableStateOf(false) }
 
-    // SINKRONISASI REAL-TIME: Mengambil riwayat DAN saldo bersih terbaru dari tabel User
+
     LaunchedEffect(Unit) {
         viewModel.loadLaporanHistory { errorMessage ->
             Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
         }
-        viewModel.loadUserBalance() // Sinkronisasi saldo profil
+        viewModel.loadUserBalance()
     }
 
     Scaffold(
@@ -87,7 +87,7 @@ fun LaporanScreen(navController: NavController, viewModel: SetoranViewModel) {
                     .padding(horizontal = 16.dp)
             ) {
                 item {
-                    // Tampilkan saldo dari kolom total_poin_user di database
+
                     TotalPointsCard(points = viewModel.totalPoinUser)
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -122,13 +122,13 @@ fun LaporanScreen(navController: NavController, viewModel: SetoranViewModel) {
                     Spacer(modifier = Modifier.height(12.dp))
                 }
 
-                // Beri ruang ekstra di bawah agar tidak tertutup Navbar
+
                 item { Spacer(modifier = Modifier.height(80.dp)) }
             }
         }
     }
 
-    // --- DIALOG FILTER ---
+
     if (showFilterDialog) {
         FilterDialog(
             currentStatus = viewModel.filterStatus,
@@ -142,7 +142,7 @@ fun LaporanScreen(navController: NavController, viewModel: SetoranViewModel) {
         )
     }
 
-    // --- DIALOG EXPORT ---
+
     if (showExportDialog) {
         ExportDialog(
             onDismiss = { showExportDialog = false },
@@ -152,7 +152,7 @@ fun LaporanScreen(navController: NavController, viewModel: SetoranViewModel) {
     }
 }
 
-// --- FUNGSI EXPORT PDF (FULL STYLING) ---
+
 fun exportLaporanToPdf(context: Context, laporanList: List<SetoranData>) {
     val pdfDocument = PdfDocument()
     val paint = Paint()

@@ -6,7 +6,7 @@ import com.example.mybin.model.UserProfileResponse
 import retrofit2.Call
 import retrofit2.http.*
 
-// --- MODEL DATA SAMPAH (Master Data) ---
+
 data class Sampah(
     val id: Int,
     val user_id: Int,
@@ -15,7 +15,7 @@ data class Sampah(
     val detail: String?,
     val coin: Int?,
     val status: String?,
-    val foto: String?, // String Base64 dari database
+    val foto: String?,
     val sampah: SampahNestedDetail? = null,
     val user: UserDataLogin? = null,
     val total_koin: Int? = 0
@@ -31,7 +31,7 @@ data class ListSampahResponse(
     val data: List<Sampah>
 )
 
-// --- MODEL DATA SETORAN ---
+
 data class SetoranRequest(
     val sampahIds: String,
     val totalKoin: Int,
@@ -59,12 +59,12 @@ data class SetoranItem(
     val user: UserDataLogin?
 )
 
-// Model untuk request update status verifikasi oleh Admin
+
 data class UpdateStatusRequest(
     val status: String
 )
 
-// --- MODEL DATA EXCHANGE (PENUKARAN POIN) ---
+
 data class ExchangeRequest(
     val amount_poin: Int,
     val phone_number: String
@@ -73,7 +73,7 @@ data class ExchangeRequest(
 data class ExchangeResponse(
     val message: String,
     val status: String,
-    val current_balance: Int?, // Saldo terbaru setelah dipotong
+    val current_balance: Int?,
     val data: ExchangeData?
 )
 
@@ -85,7 +85,7 @@ data class ExchangeData(
     val status: String
 )
 
-// --- MODEL DATA EDUKASI (BERITA) ---
+
 data class EdukasiRequest(
     val judul: String,
     val deskripsi: String,
@@ -114,7 +114,7 @@ data class ListEdukasiResponse(
     val data: List<EdukasiData>
 )
 
-// --- MODEL AUTH & FCM ---
+
 data class LoginRequest(val username: String, val password: String)
 
 data class LoginResponse(
@@ -126,15 +126,15 @@ data class LoginResponse(
 data class UserDataLogin(
     val id: Int,
     val username: String,
-    val total_poin_user: Int // Penting untuk tampilan saldo real-time
+    val total_poin_user: Int
 )
 
 data class FCMRequest(val token: String)
 
-// --- INTERFACE API SERVICE ---
+
 interface ApiService {
 
-    // --- AUTHENTICATION ---
+
     @POST("api/login")
     fun login(@Body request: LoginRequest): Call<LoginResponse>
 
@@ -143,15 +143,14 @@ interface ApiService {
         @Header("Authorization") token: String
     ): Call<UserProfileResponse>
 
-    // --- FIREBASE CLOUD MESSAGING ---
-    // Endpoint ini wajib dipanggil saat superbin login untuk menerima notifikasi
+
     @PUT("api/update-fcm-token")
     fun updateFCMToken(
         @Header("Authorization") token: String,
         @Body request: FCMRequest
     ): Call<Void>
 
-    // --- MODUL SAMPAH ---
+
     @POST("api/sampah")
     fun createSampah(@Header("Authorization") token: String, @Body request: SampahRequest): Call<SampahResponse>
 
@@ -164,8 +163,7 @@ interface ApiService {
     @DELETE("api/sampah/{id}")
     fun deleteSampah(@Path("id") id: String, @Header("Authorization") token: String): Call<SampahResponse>
 
-    // --- MODUL SETORAN ---
-    // Endpoint ini yang akan memicu pengiriman notifikasi ke superbin di sisi backend
+
     @POST("api/setoran")
     fun createSetoran(@Header("Authorization") token: String, @Body request: SetoranRequest): Call<SetoranResponse>
 
@@ -185,18 +183,18 @@ interface ApiService {
         @Body request: UpdateStatusRequest
     ): Call<Void>
 
-    // --- MODUL LAPORAN & HISTORY ---
+
     @GET("api/laporan/history")
     fun getLaporanHistory(@Header("Authorization") token: String): Call<ListSampahResponse>
 
-    // --- MODUL EXCHANGE / REWARD ---
+
     @POST("api/exchange")
     fun createExchange(
         @Header("Authorization") token: String,
         @Body request: ExchangeRequest
     ): Call<ExchangeResponse>
 
-    // --- MODUL EDUKASI (NEWS) ---
+
     @POST("api/edukasi")
     fun createEdukasi(@Header("Authorization") token: String, @Body request: EdukasiRequest): Call<EdukasiResponse>
 

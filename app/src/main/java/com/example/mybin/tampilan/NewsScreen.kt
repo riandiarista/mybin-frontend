@@ -47,10 +47,10 @@ import java.util.Locale
 fun NewsScreen(navController: NavController, viewModel: BeritaViewModel) {
     val context = LocalContext.current
 
-    // TAMBAHAN: Memicu fetch data dan muat data user login saat layar dibuka
+
     LaunchedEffect(Unit) {
         viewModel.fetchBerita()
-        viewModel.loadCurrentUser(context) // Memastikan username terdeteksi
+        viewModel.loadCurrentUser(context)
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -119,7 +119,7 @@ private fun Header() {
 private fun Body(navController: NavController, viewModel: BeritaViewModel) {
     val beritaList by viewModel.beritaList
     val isLoading by viewModel.isLoading
-    val currentUsername by viewModel.currentUsername // Ambil username dari ViewModel
+    val currentUsername by viewModel.currentUsername
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -145,7 +145,7 @@ private fun Body(navController: NavController, viewModel: BeritaViewModel) {
             Text(text = "Berita Terbaru", fontWeight = FontWeight.Bold, fontSize = 20.sp)
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Loading indicator
+
             if (isLoading && beritaList.isEmpty()) {
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.CenterHorizontally),
@@ -208,7 +208,7 @@ private fun Body(navController: NavController, viewModel: BeritaViewModel) {
             Spacer(modifier = Modifier.height(80.dp))
         }
 
-        // LOGIKA PERBAIKAN: Tombol Floating hanya muncul jika user BUKAN "superbin"
+
         if (currentUsername != "superbin") {
             FloatingActionButton(
                 onClick = { navController.navigate("berita_anda_screen") },

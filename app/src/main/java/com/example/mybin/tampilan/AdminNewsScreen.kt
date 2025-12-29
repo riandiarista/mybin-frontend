@@ -115,7 +115,7 @@ private fun Header() {
 
 @Composable
 private fun Body(navController: NavController, viewModel: BeritaViewModel) {
-    // SINKRONISASI: Ambil State list dari ViewModel
+
     val beritaList by viewModel.beritaList //
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -151,7 +151,7 @@ private fun Body(navController: NavController, viewModel: BeritaViewModel) {
                 val onClick: () -> Unit
             )
 
-            // SINKRONISASI: Menggabungkan data hardcoded dengan data dari Database
+
             val combinedList = remember(beritaList) {
                 val hardcodedItems = listOf(
                     DisplayItem(
@@ -172,7 +172,7 @@ private fun Body(navController: NavController, viewModel: BeritaViewModel) {
 
                 val dynamicItems = beritaList.map { berita ->
                     DisplayItem(
-                        // PERBAIKAN: Menggunakan judul, lokasi, createdAt, dan cover
+
                         title = berita.judul,
                         source = berita.lokasi?.ifEmpty { "User" } ?: "User",
                         date = berita.createdAt,
@@ -203,7 +203,7 @@ private fun Body(navController: NavController, viewModel: BeritaViewModel) {
 
 private fun parseDate(dateStr: String): Date {
     val locale = Locale("id", "ID")
-    // SINKRONISASI: Menambahkan format ISO 8601 yang biasanya dikirim Database (createdAt)
+
     val patterns = listOf(
         "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
         "d MMMM yyyy, HH:mm 'WIB'",

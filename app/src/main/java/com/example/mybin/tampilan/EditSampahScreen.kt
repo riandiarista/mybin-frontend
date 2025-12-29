@@ -2,7 +2,7 @@ package com.example.mybin.tampilan
 
 import android.content.Context
 import android.net.Uri
-import android.util.Base64 // DITAMBAHKAN
+import android.util.Base64
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -41,7 +41,7 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
-// Fungsi Helper untuk konversi URI gambar ke String Base64 (Sama seperti di DetailSampahScreen)
+
 fun editUriToBase64(context: Context, uri: Uri): String? {
     return try {
         val inputStream = context.contentResolver.openInputStream(uri)
@@ -69,7 +69,7 @@ fun EditSampahScreen(navController: NavController, sampahId: String, sampahViewM
         var totalBobotText by remember { mutableStateOf(sampah.totalBobot.removeSuffix(" Kg")) }
         var totalBobotFloat by remember { mutableStateOf(sampah.totalBobot.removeSuffix(" Kg").toFloatOrNull() ?: 0f) }
 
-        // imageUri menyimpan URI lokal dari galeri/kamera
+
         var imageUri by remember { mutableStateOf(sampah.imageUri) }
         var tempImageUri by remember { mutableStateOf<Uri?>(null) }
         val context = LocalContext.current
@@ -199,7 +199,7 @@ fun EditSampahScreen(navController: NavController, sampahId: String, sampahViewM
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Menampilkan Gambar (Prioritas: imageUri baru, lalu string foto lama dari DB)
+
                     if (imageUri != null || !sampah.foto.isNullOrEmpty()) {
                         Image(
                             painter = rememberAsyncImagePainter(imageUri ?: sampah.foto),
@@ -248,17 +248,17 @@ fun EditSampahScreen(navController: NavController, sampahId: String, sampahViewM
 
                     Button(
                         onClick = {
-                            // PROSES KONVERSI: Konversi URI baru ke Base64 jika ada, jika tidak gunakan foto lama
+
                             val base64Image = imageUri?.let { editUriToBase64(context, it) } ?: sampah.foto
 
-                            // PANGGIL updateSampahInApi dengan parameter 'foto'
+
                             sampahViewModel.updateSampahInApi(
                                 id = sampah.id,
                                 jenis = sampah.jenisSampah,
                                 berat = totalBobotFloat,
                                 detail = detailSampah,
                                 coin = estimasiKoin,
-                                foto = base64Image, // Menyertakan data gambar (Base64)
+                                foto = base64Image,
                                 onSuccess = { message ->
                                     scope.launch {
                                         snackbarHostState.showSnackbar(message)

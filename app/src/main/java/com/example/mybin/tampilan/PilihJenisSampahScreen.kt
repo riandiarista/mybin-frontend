@@ -77,7 +77,7 @@ fun PilihJenisSampahScreen(navController: NavController) {
                         JenisSampahCard(
                             title = "Organik",
                             price = "1000/kg",
-                            imagePainterId = R.drawable.introawal, // Placeholder
+                            imagePainterId = R.drawable.introawal,
                             color = Color(0xFF4CAF50),
                             onClick = { navController.navigate("DetailSampahScreen/Organik/1000 per kg") }
                         )
@@ -86,7 +86,7 @@ fun PilihJenisSampahScreen(navController: NavController) {
                         JenisSampahCard(
                             title = "Anorganik",
                             price = "2000/kg",
-                            imagePainterId = R.drawable.introawal, // Placeholder
+                            imagePainterId = R.drawable.introawal,
                             color = Color.Black,
                             onClick = { navController.navigate("DetailSampahScreen/Anorganik/2000 per kg") }
                         )
@@ -95,7 +95,7 @@ fun PilihJenisSampahScreen(navController: NavController) {
                         JenisSampahCard(
                             title = "B3",
                             price = "1500/kg",
-                            imagePainterId = R.drawable.introawal, // Placeholder
+                            imagePainterId = R.drawable.introawal,
                             color = Color.Red,
                             onClick = { navController.navigate("DetailSampahScreen/B3/1500 per kg") }
                         )
